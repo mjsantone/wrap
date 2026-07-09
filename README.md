@@ -10,6 +10,7 @@ from the original player and rebuilt as dependency-free single-file pages.
 | [`index.html`](index.html) | **Wrap Composer** — type a story, an LLM (Claude) writes a wrap from the format's primitives, and it renders instantly in the player. Bring-your-own API key (stored in your browser only); "Try a sample" works without one. |
 | [`player.html`](player.html) | **Wrap Library** — a generic player that renders any original wrap from its JSON. Seven reverse-engineered wraps embedded (`#w0`–`#w6`). |
 | [`howwemet.html`](howwemet.html) | **How We Met** — a full-fidelity handcrafted reconstruction of the original example wrap. |
+| `w.html` (`/w/{id}`) | **Wrap Viewer** — plays a shared wrap fetched from the API. Share links work on the Azure deployment (see below); on GitHub Pages the Share button explains itself. |
 
 ## How generation works
 
@@ -118,6 +119,8 @@ python3 build.py --check  # what CI runs: fails if outputs are stale
 | `src/fonts.css` | The three families as data-URI woff2 |
 | `src/data/wraps-data.js` | The embedded library wraps |
 | `src/pages/*.html` | Per-page templates (chrome + wiring); `/*@inline path*/` tokens mark where sources are embedded |
+| `api/` | Azure Functions API (persistence + share links) — `node --test` in `api/` runs its unit tests |
+| `staticwebapp.config.json` | Azure Static Web Apps config: `/w/{id}` rewrite, API runtime |
 
 The outputs stay committed so GitHub Pages serves them directly; the
 `build-check` workflow rejects commits where they drift from `src/`.
