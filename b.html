@@ -736,48 +736,48 @@ body { margin: 0; background: #000; }
 
   /* ---------- the generation contract ---------- */
 
+  /* The generation contract is shared with the server API — single source in api/src/contract/. */
   var STORY_SCHEMA = {
-    type: 'object', additionalProperties: false,
-    required: ['name', 'cards'],
-    properties: {
-      name: { type: 'string' },
-      cards: {
-        type: 'array',
-        items: {
-          type: 'object', additionalProperties: false,
-          required: ['type', 'kicker', 'title', 'body', 'lines', 'attribution', 'price', 'button', 'url', 'address', 'image', 'items'],
-          properties: {
-            type: { type: 'string', enum: ['cover', 'quote', 'prose', 'gallery', 'product', 'video', 'map'] },
-            kicker: { type: ['string', 'null'] },
-            title: { type: ['string', 'null'] },
-            body: { type: ['string', 'null'] },
-            lines: { type: ['array', 'null'], items: { type: 'string' } },
-            attribution: { type: ['string', 'null'] },
-            price: { type: ['string', 'null'] },
-            button: { type: ['string', 'null'] },
-            url: { type: ['string', 'null'] },
-            address: { type: ['string', 'null'] },
-            image: {
-              type: ['object', 'null'], additionalProperties: false,
-              required: ['h1', 'h2', 'label'],
-              properties: {
-                h1: { type: 'integer' }, h2: { type: 'integer' }, label: { type: 'string' }
-              }
-            },
-            items: {
-              type: ['array', 'null'],
-              items: {
-                type: 'object', additionalProperties: false,
-                required: ['kicker', 'title', 'body', 'image'],
-                properties: {
-                  kicker: { type: ['string', 'null'] },
-                  title: { type: 'string' },
-                  body: { type: 'string' },
-                  image: {
-                    type: ['object', 'null'], additionalProperties: false,
-                    required: ['h1', 'h2', 'label'],
-                    properties: { h1: { type: 'integer' }, h2: { type: 'integer' }, label: { type: 'string' } }
-                  }
+  "type": "object", "additionalProperties": false,
+  "required": ["name", "cards"],
+  "properties": {
+    "name": { "type": "string" },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["type", "kicker", "title", "body", "lines", "attribution", "price", "button", "url", "address", "image", "items"],
+        "properties": {
+          "type": { "type": "string", "enum": ["cover", "quote", "prose", "gallery", "product", "video", "map"] },
+          "kicker": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "body": { "type": ["string", "null"] },
+          "lines": { "type": ["array", "null"], "items": { "type": "string" } },
+          "attribution": { "type": ["string", "null"] },
+          "price": { "type": ["string", "null"] },
+          "button": { "type": ["string", "null"] },
+          "url": { "type": ["string", "null"] },
+          "address": { "type": ["string", "null"] },
+          "image": {
+            "type": ["object", "null"], "additionalProperties": false,
+            "required": ["h1", "h2", "label"],
+            "properties": {
+              "h1": { "type": "integer" }, "h2": { "type": "integer" }, "label": { "type": "string" }
+            }
+          },
+          "items": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["kicker", "title", "body", "image"],
+              "properties": {
+                "kicker": { "type": ["string", "null"] },
+                "title": { "type": "string" },
+                "body": { "type": "string" },
+                "image": {
+                  "type": ["object", "null"], "additionalProperties": false,
+                  "required": ["h1", "h2", "label"],
+                  "properties": { "h1": { "type": "integer" }, "h2": { "type": "integer" }, "label": { "type": "string" } }
                 }
               }
             }
@@ -785,24 +785,27 @@ body { margin: 0; background: #000; }
         }
       }
     }
-  };
+  }
+}
+;
 
-  var SYSTEM_PROMPT = [
-    'You are a story designer for BOOK, a mobile flip-book format: a phone-sized stack of full-screen cards the reader swipes through.',
-    'Given a story idea, compose a book of 5 to 8 cards using these card types:',
-    '- cover: the opening card. title (2-4 words, evocative) + kicker (a one-line subtitle). Always first.',
-    '- prose: a narrative beat. kicker (optional small line), title (2-5 words), body (2-4 sentences, warm and concrete).',
-    '- gallery: 3-4 moments the reader scrolls through vertically. Each item: kicker (place/context, 1-3 words), title (2-3 words), body (1-2 sentences).',
-    '- quote: a poem, letter excerpt, or meaningful quotation. lines (each line short), attribution (optional). Use at most once.',
-    '- product: something offered or celebrated, with a call to action. title, body, optional price (like "$18"), button (2-3 words), url (real if given, else null).',
-    '- video: only if the user mentions a video or gives a YouTube link. url required.',
-    '- map: only if the story has a real place worth visiting. address = the street address or place name. title like "VISIT US".',
-    '',
-    'Every card and gallery item needs an image: h1 and h2 are HSL hues 0-359 chosen to evoke the scene (the renderer draws a dark duotone gradient - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340). label is a 2-5 word description of the photo that WOULD be there (e.g. "sunset over the pier").',
-    '',
-    'Rules: exactly one cover, first. Vary card types. Choose hues that flow like a color story across the book. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.',
-    'Write with specificity and heart. Use the user\'s details; invent tasteful specifics where needed.'
-  ].join('\n');
+  var SYSTEM_PROMPT = ([
+  "You are a story designer for BOOK, a mobile flip-book format: a phone-sized stack of full-screen cards the reader swipes through.",
+  "Given a story idea, compose a book of 5 to 8 cards using these card types:",
+  "- cover: the opening card. title (2-4 words, evocative) + kicker (a one-line subtitle). Always first.",
+  "- prose: a narrative beat. kicker (optional small line), title (2-5 words), body (2-4 sentences, warm and concrete).",
+  "- gallery: 3-4 moments the reader scrolls through vertically. Each item: kicker (place/context, 1-3 words), title (2-3 words), body (1-2 sentences).",
+  "- quote: a poem, letter excerpt, or meaningful quotation. lines (each line short), attribution (optional). Use at most once.",
+  "- product: something offered or celebrated, with a call to action. title, body, optional price (like \"$18\"), button (2-3 words), url (real if given, else null).",
+  "- video: only if the user mentions a video or gives a YouTube link. url required.",
+  "- map: only if the story has a real place worth visiting. address = the street address or place name. title like \"VISIT US\".",
+  "",
+  "Every card and gallery item needs an image: h1 and h2 are HSL hues 0-359 chosen to evoke the scene (the renderer draws a dark duotone gradient - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340). label is a 2-5 word description of the photo that WOULD be there (e.g. \"sunset over the pier\").",
+  "",
+  "Rules: exactly one cover, first. Vary card types. Choose hues that flow like a color story across the book. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
+  "Write with specificity and heart. Use the user's details; invent tasteful specifics where needed."
+]
+).join('\n');
 
   /* Built-in sample — exercises every layout without an API call */
   var SAMPLE = {

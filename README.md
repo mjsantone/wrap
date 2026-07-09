@@ -12,25 +12,28 @@ original format; the product here is BOOK.)
 
 | Page | What it is |
 | --- | --- |
-| [`index.html`](index.html) | **Book Composer** — type a story, an LLM (Claude) writes a book from the format's primitives, and it renders instantly in the player. Bring-your-own API key (stored in your browser only); "Try a sample" works without one. |
+| [`index.html`](index.html) | **Book Composer** — type a story, an LLM (Claude) writes a book from the format's primitives, and it renders instantly in the player. Hosted generation on Azure (no key needed); bring-your-own-key fallback elsewhere; "Try a sample" always works. |
 | [`player.html`](player.html) | **Book Library** — a generic player that renders any original wrap.co wrap from its JSON. Seven reverse-engineered examples embedded (`#b0`–`#b6`). |
 | [`howwemet.html`](howwemet.html) | **How We Met** — a full-fidelity handcrafted reconstruction of the original example wrap. |
 | `b.html` (`/b/{id}`) | **Book Viewer** — plays a shared book fetched from the API. Share links work on the Azure deployment (see below); on GitHub Pages the Share button explains itself. |
 
 ## How generation works
 
-The homepage sends your story to the Anthropic API (`claude-opus-4-8`) directly from
-the browser, with a structured-output JSON schema so the response is guaranteed-valid.
+On the hosted (Azure) deployment, the homepage POSTs your story to
+`/api/generate`, which calls Claude (`claude-opus-4-8`) server-side — visitors
+don't need an API key. Where no API exists (GitHub Pages) or no model key is
+configured, the page falls back to calling the Anthropic API directly from the
+browser with your own key. Either way the request uses a structured-output JSON
+schema so the response is guaranteed-valid.
+
 The model writes a **semantic story schema** — card types like `cover`, `prose`,
 `gallery`, `quote`, `product`, `video`, `map`, each with copy and a color mood — and a
 deterministic compiler in the page maps every card onto the exact layouts
 reverse-engineered from real wrap.co examples (the 640 × 910 canvas, headline at
 y=590, gallery text at 555/615/700, and so on). The LLM never emits pixel
-coordinates, so books always come out looking designed.
-
-Scaling note: for public use without per-visitor API keys, put a small serverless
-proxy in front of the Anthropic API and point the page's fetch URL at it — the
-rest of the page is unchanged. (This is roadmap phase 3 in `ARCHITECTURE.md`.)
+coordinates, so books always come out looking designed. The generation contract
+(schema + system prompt) lives once in `api/src/contract/` and is inlined into
+the page at build time.
 
 ## About the original format
 

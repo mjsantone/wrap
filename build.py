@@ -37,7 +37,15 @@ def build_page(src: str) -> str:
             sys.exit(f"error: {src} inlines missing file {m.group(1).strip()}")
         return path.read_text(encoding="utf-8")
 
-    return HEADER.format(src=src) + TOKEN.sub(inline, text)
+    # Inlined files may themselves contain tokens (e.g. compile.js pulls the
+    # generation contract from api/src/contract/). Resolve until stable.
+    for _ in range(10):
+        text, count = TOKEN.subn(inline, text)
+        if count == 0:
+            break
+    else:
+        sys.exit(f"error: {src} did not stabilize — inline cycle?")
+    return HEADER.format(src=src) + text
 
 
 def main() -> None:

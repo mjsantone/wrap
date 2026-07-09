@@ -129,7 +129,7 @@
   <div class="error-box" id="errorBox" hidden></div>
 
   <details class="key-details" id="keyDetails">
-    <summary>API key</summary>
+    <summary>API key (only needed where hosted generation isn’t set up)</summary>
     <div class="key-row">
       <input type="password" id="keyInput" placeholder="sk-ant-…" autocomplete="off"/>
       <button class="btn btn-ghost" id="saveKeyBtn" style="padding:11px 18px;">Save</button>
@@ -210,6 +210,29 @@
   }
 
   var GEN_TIMEOUT_MS = 180000; // 3 min — adaptive thinking on this task can run long
+
+  /* Preferred path: the hosted API generates server-side (no visitor key).
+   * Returns the story, or null when no server is available (GitHub Pages,
+   * or the API has no model keys configured) — the caller then falls back
+   * to the browser bring-your-own-key path. Real generation errors throw. */
+  async function generateServer(storyText) {
+    var res;
+    try {
+      res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story: storyText })
+      });
+    } catch (e) {
+      return null; // no API at all (static hosting) — fall back
+    }
+    if (res.status === 404 || res.status === 405) return null;
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (res.status === 503 && data && data.error === 'NOT_CONFIGURED') return null;
+    if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+    return data.story;
+  }
 
   async function generate(storyText) {
     var key = getKey();
@@ -355,16 +378,20 @@
 
   async function runGenerate(text) {
     errorBox.hidden = true;
-    if (!getKey()) {
-      keyDetails.open = true;
-      showError('Add your Anthropic API key first (or use “Try a sample”).');
-      return;
-    }
     generateBtn.disabled = true; sampleBtn.disabled = true;
     loading.hidden = false;
     lastStoryText = text;
     try {
-      var story = await generate(text);
+      var story = await generateServer(text);
+      if (story === null) {
+        // No hosted generation here — browser bring-your-own-key fallback.
+        if (!getKey()) {
+          keyDetails.open = true;
+          showError('This deployment has no hosted generation — add your Anthropic API key below (or use “Try a sample”).');
+          return;
+        }
+        story = await generate(text);
+      }
       showPlayer(story);
     } catch (e) {
       showError(e.message === 'NO_KEY'
