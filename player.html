@@ -237,6 +237,13 @@ window.WRAPS = [{"id":"dc195abc-6616-4d5a-9c22-ba7979bf4927","name":"Storytellin
     if (css.position !== 'absolute') el.style.position = 'absolute';
   }
 
+  function safeUrl(url) {
+    if (typeof url !== 'string') return null;
+    var u = url.trim();
+    if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+    return null;
+  }
+
   function hashHue(s) {
     var h = 0;
     for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
@@ -290,10 +297,11 @@ window.WRAPS = [{"id":"dc195abc-6616-4d5a-9c22-ba7979bf4927","name":"Storytellin
       el = document.createElement('a');
       el.className = 'cmp cmp-action';
       applyCss(el, node.css);
-      if (node.url && node.url !== 'http://' && node.url !== 'https://') {
-        el.href = node.url;
-        if (node.url.indexOf('tel:') !== 0 && node.url.indexOf('mailto:') !== 0) {
-          el.target = '_blank'; el.rel = 'noopener';
+      var au = safeUrl(node.url);
+      if (au && au !== 'http://' && au !== 'https://') {
+        el.href = au;
+        if (au.indexOf('tel:') !== 0 && au.indexOf('mailto:') !== 0) {
+          el.target = '_blank'; el.rel = 'noopener noreferrer';
         }
       }
       el.setAttribute('aria-label', node.n || 'link');
@@ -356,7 +364,8 @@ window.WRAPS = [{"id":"dc195abc-6616-4d5a-9c22-ba7979bf4927","name":"Storytellin
       el = document.createElement('a');
       el.className = 'cmp cmp-youtube';
       applyCss(el, node.css);
-      if (node.url) { el.href = node.url; el.target = '_blank'; el.rel = 'noopener'; }
+      var su = safeUrl(node.url);
+      if (su) { el.href = su; el.target = '_blank'; el.rel = 'noopener noreferrer'; }
       el.setAttribute('aria-label', 'Play video');
       el.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true">' +
         '<circle cx="50" cy="50" r="46" fill="rgba(0,0,0,0.45)" stroke="#fff" stroke-width="5"/>' +
@@ -366,7 +375,8 @@ window.WRAPS = [{"id":"dc195abc-6616-4d5a-9c22-ba7979bf4927","name":"Storytellin
       el = document.createElement('a');
       el.className = 'cmp cmp-widget';
       applyCss(el, node.css);
-      if (node.url) { el.href = node.url; el.target = '_blank'; el.rel = 'noopener'; }
+      var su = safeUrl(node.url);
+      if (su) { el.href = su; el.target = '_blank'; el.rel = 'noopener noreferrer'; }
       var wlabel = /typeform/i.test(node.n || '') ? 'Open Form' : (node.n || 'Open');
       el.innerHTML = '<span>' + wlabel + '</span>';
       el.title = node.n || '';
