@@ -1,0 +1,18 @@
+name: build-check
+
+# Drift guard: index.html and player.html are generated from src/ by build.py.
+# Fail the build if someone edits the outputs (or the sources) without
+# regenerating, so the committed pages always match the sources.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify built pages match src/
+        run: python3 build.py --check

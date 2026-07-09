@@ -1,0 +1,116 @@
+<title>WRAP Player</title>
+
+<style>
+/*@inline src/fonts.css*/
+/*@inline src/runtime.css*/
+
+  /* ---- library picker ---- */
+  .lib-toggle {
+    position: absolute; top: 10px; left: 10px; z-index: 1010;
+    background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
+    padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+    max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lib-toggle:hover, .lib-toggle:focus-visible { opacity: 1; }
+  .library {
+    position: absolute; inset: 0; z-index: 1020; background: rgba(10,10,10,0.96);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    transition: opacity 0.25s; opacity: 1;
+  }
+  .library[hidden] { display: none; }
+  .library h2 { font-family: 'Montserrat', sans-serif; font-weight: 700; letter-spacing: 0.18em;
+    font-size: 14px; color: #9fcc3a; text-transform: uppercase; margin: 0 0 10px; }
+  .library button {
+    width: 78%; padding: 16px 20px; cursor: pointer;
+    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+    font-family: 'Open Sans', sans-serif; font-size: 16px; text-align: left;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .library button:hover { border-color: #9fcc3a; background: rgba(159,204,58,0.08); }
+  .library button small { display: block; color: rgba(255,255,255,0.5); font-size: 12px; margin-top: 4px; }
+</style>
+
+<div class="player-stage">
+  <div class="screen" id="screen">
+    <div class="card-container" id="cardContainer"></div>
+
+    <div class="tap-zone left"  id="tapLeft"  aria-hidden="true"></div>
+    <div class="tap-zone right" id="tapRight" aria-hidden="true"></div>
+
+    <button class="pv-btn prev" id="prevBtn" aria-label="Previous card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M16 3 L4 17 L16 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="pv-btn next" id="nextBtn" aria-label="Next card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M4 3 L16 17 L4 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
+
+    <button class="lib-toggle" id="libToggle" aria-label="Choose a wrap">≡ Library</button>
+    <div class="library" id="library">
+      <h2>WRAP Library</h2>
+      <!-- buttons injected -->
+    </div>
+  </div>
+</div>
+
+<script>
+/*@inline src/data/wraps-data.js*/
+</script>
+<script>
+/*@inline src/runtime.js*/
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var library = document.getElementById('library');
+  var libToggle = document.getElementById('libToggle');
+  var currentWrap = null;
+
+  var player = WrapRuntime.createPlayer({
+    screen: document.getElementById('screen'),
+    container: document.getElementById('cardContainer'),
+    prevBtn: document.getElementById('prevBtn'),
+    nextBtn: document.getElementById('nextBtn'),
+    pageBar: document.getElementById('pageBar'),
+    tapLeft: document.getElementById('tapLeft'),
+    tapRight: document.getElementById('tapRight'),
+    dragGate: function () { return library.hidden; },
+    onLoaded: function (w) {
+      document.title = w.name + ' — WRAP Player';
+      libToggle.textContent = '≡ ' + w.name;
+    }
+  });
+
+  function open(w) {
+    currentWrap = w;
+    player.loadWrap(w);
+  }
+
+  /* ---------- library ---------- */
+  window.WRAPS.forEach(function (w, i) {
+    var b = document.createElement('button');
+    b.innerHTML = WrapRuntime.escapeHtml(w.name) + '<small>' + w.cards.length + ' cards</small>';
+    b.addEventListener('click', function () {
+      library.hidden = true;
+      location.hash = 'w' + i;
+      open(w);
+    });
+    library.appendChild(b);
+  });
+  libToggle.addEventListener('click', function () { library.hidden = !library.hidden; });
+
+  function wrapFromHash() {
+    var m = location.hash.match(/^#w(\d+)$/);
+    return window.WRAPS[Math.min(window.WRAPS.length - 1, m ? parseInt(m[1], 10) || 0 : 0)];
+  }
+  window.addEventListener('hashchange', function () {
+    var w = wrapFromHash();
+    if (w !== currentWrap) { library.hidden = true; open(w); }
+  });
+  library.hidden = true;
+  open(wrapFromHash());
+})();
+</script>

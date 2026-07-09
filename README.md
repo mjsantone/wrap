@@ -102,4 +102,26 @@ placeholders.
 
 ## Development
 
-There is no build step. Edit `index.html` or `player.html`, open in a browser.
+`index.html` and `player.html` are **generated** — edit the sources in `src/`
+and rebuild:
+
+```
+python3 build.py          # writes index.html and player.html
+python3 build.py --check  # what CI runs: fails if outputs are stale
+```
+
+| Source | What it is |
+| --- | --- |
+| `src/runtime.js` | `WrapRuntime` — the shared renderer (all component types) and flip engine |
+| `src/compile.js` | `WrapCompiler` — story JSON schema, system prompt, and the semantic→layout compiler |
+| `src/runtime.css` | Player stage, card mechanics, and component styles |
+| `src/fonts.css` | The three families as data-URI woff2 |
+| `src/data/wraps-data.js` | The embedded library wraps |
+| `src/pages/*.html` | Per-page templates (chrome + wiring); `/*@inline path*/` tokens mark where sources are embedded |
+
+The outputs stay committed so GitHub Pages serves them directly; the
+`build-check` workflow rejects commits where they drift from `src/`.
+`howwemet.html` is a hand-crafted reconstruction and is not built.
+
+Where this is heading — hosting, server-side generation, the discovery
+gallery, image generation — is written up in [`ARCHITECTURE.md`](ARCHITECTURE.md).

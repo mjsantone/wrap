@@ -1,0 +1,335 @@
+<title>WRAP — Tell it. Wrap it.</title>
+
+<style>
+/*@inline src/fonts.css*/
+/*@inline src/runtime.css*/
+
+  /* ================= Homepage ================= */
+  .home {
+    min-height: 100vh; background: #0d0e10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+    padding: 40px 20px 60px;
+  }
+  .home.hidden { display: none; }
+  .wordmark {
+    font-family: 'Montserrat', sans-serif; font-weight: 700;
+    font-size: 44px; letter-spacing: 0.16em; color: #fff; margin: 0;
+  }
+  .wordmark b { color: #9fcc3a; }
+  .tagline {
+    font-family: 'Josefin Slab', Georgia, serif; font-size: 22px;
+    color: rgba(255,255,255,0.65); margin: 10px 0 42px; text-align: center;
+  }
+  .prompt-box { width: 100%; max-width: 620px; }
+  .prompt-box textarea {
+    width: 100%; min-height: 130px; resize: vertical;
+    background: #17181b; color: #f2f2f2;
+    border: 1px solid #2c2e33; border-radius: 14px;
+    padding: 18px 20px; font-family: 'Open Sans', sans-serif; font-size: 16px; line-height: 1.55;
+    outline: none; transition: border-color 0.2s;
+  }
+  .prompt-box textarea:focus { border-color: #9fcc3a; }
+  .prompt-box textarea::placeholder { color: #5b5e66; }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    border: none; border-radius: 999px; cursor: pointer;
+    padding: 14px 30px; transition: transform 0.15s, filter 0.2s, background 0.2s;
+  }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn-primary { background: #9fcc3a; color: #14170a; }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.07); }
+  .btn-ghost { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid #2c2e33; }
+  .btn-ghost:hover { color: #fff; border-color: #9fcc3a; }
+  .key-details { margin-top: 26px; width: 100%; max-width: 620px; color: #8a8d94; font-size: 13px; }
+  .key-details summary { cursor: pointer; user-select: none; color: #a9adb5; }
+  .key-details summary:hover { color: #fff; }
+  .key-row { display: flex; gap: 10px; margin-top: 12px; }
+  .key-row input {
+    flex: 1; background: #17181b; color: #f2f2f2;
+    border: 1px solid #2c2e33; border-radius: 10px; padding: 11px 14px;
+    font-family: monospace; font-size: 13px; outline: none;
+  }
+  .key-row input:focus { border-color: #9fcc3a; }
+  .key-note { line-height: 1.55; margin-top: 10px; }
+  .key-note a { color: #9fcc3a; text-decoration: none; }
+  .error-box {
+    margin-top: 18px; width: 100%; max-width: 620px;
+    background: rgba(220, 70, 70, 0.1); border: 1px solid rgba(220,70,70,0.4);
+    color: #f0a5a5; border-radius: 10px; padding: 13px 16px; font-size: 14px; line-height: 1.5;
+  }
+  .error-box[hidden] { display: none; }
+
+  /* the authentic WRAP loading spinner (from the original player shell) */
+  .sk-spinner-wave { width: 200px; height: 45px; text-align: center; font-size: 10px; margin: 34px auto 0; }
+  .sk-spinner-wave div {
+    background-color: rgba(112,174,67,.9); height: 30px; width: 17px; display: inline-block;
+    animation: sk-waveStretchDelay 1.2s infinite ease-in-out; margin: 0 2px;
+  }
+  .sk-spinner-wave .sk-rect2 { animation-delay: -1.1s; }
+  .sk-spinner-wave .sk-rect3 { animation-delay: -1.0s; }
+  .sk-spinner-wave .sk-rect4 { animation-delay: -0.9s; }
+  .sk-spinner-wave .sk-rect5 { animation-delay: -0.8s; }
+  @keyframes sk-waveStretchDelay {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50% { opacity: 0.2; transform: scaleY(0.8); }
+  }
+  .loading-note { text-align: center; color: #8a8d94; font-size: 13px; margin-top: 14px; font-family: 'Montserrat', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
+  .loading[hidden] { display: none; }
+
+  .footer-links { margin-top: 52px; font-size: 13px; color: #5b5e66; }
+  .footer-links a { color: #8a8d94; text-decoration: none; margin: 0 10px; }
+  .footer-links a:hover { color: #9fcc3a; }
+
+  .back-btn {
+    position: absolute; top: 10px; left: 10px; z-index: 1010;
+    background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
+    padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+  }
+  .back-btn:hover, .back-btn:focus-visible { opacity: 1; }
+  .regen-btn { left: auto; right: 10px; }
+</style>
+
+<!-- ================= Homepage ================= -->
+<div class="home" id="homeView">
+  <h1 class="wordmark">WR<b>A</b>P</h1>
+  <p class="tagline">Tell it. Wrap it. A phone-sized flip-book, written by AI.</p>
+
+  <div class="prompt-box">
+    <textarea id="storyInput" maxlength="2000"
+      placeholder="Tell a story… e.g. “How my grandparents met in Lisbon in 1962” or “Launch story for my sourdough bakery, with a menu and our address on Main St.”"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" id="generateBtn">Wrap it</button>
+      <button class="btn btn-ghost" id="sampleBtn">Try a sample</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading" hidden>
+    <div class="sk-spinner-wave">
+      <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
+      <div class="sk-rect4"></div><div class="sk-rect5"></div>
+    </div>
+    <div class="loading-note" id="loadingNote">Writing your wrap…</div>
+  </div>
+
+  <div class="error-box" id="errorBox" hidden></div>
+
+  <details class="key-details" id="keyDetails">
+    <summary>API key</summary>
+    <div class="key-row">
+      <input type="password" id="keyInput" placeholder="sk-ant-…" autocomplete="off"/>
+      <button class="btn btn-ghost" id="saveKeyBtn" style="padding:11px 18px;">Save</button>
+      <button class="btn btn-ghost" id="clearKeyBtn" style="padding:11px 18px;">Clear</button>
+    </div>
+    <p class="key-note">Generation calls the Anthropic API directly from your browser.
+      Your key is stored only in this browser (localStorage) and sent only to api.anthropic.com.
+      Create a spend-limited key at
+      <a href="https://platform.claude.com" target="_blank" rel="noopener noreferrer">platform.claude.com</a>.
+      “Try a sample” works without a key.</p>
+  </details>
+
+  <div class="footer-links">
+    <a href="howwemet.html">How We Met</a> ·
+    <a href="player.html">Wrap Library</a>
+  </div>
+</div>
+
+<!-- ================= Player ================= -->
+<div class="player-stage" id="playerStage" hidden>
+  <div class="screen" id="screen">
+    <div class="card-container" id="cardContainer"></div>
+
+    <div class="tap-zone left"  id="tapLeft"  aria-hidden="true"></div>
+    <div class="tap-zone right" id="tapRight" aria-hidden="true"></div>
+
+    <button class="pv-btn prev" id="prevBtn" aria-label="Previous card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M16 3 L4 17 L16 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="pv-btn next" id="nextBtn" aria-label="Next card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M4 3 L16 17 L4 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
+
+    <button class="back-btn" id="backBtn">← New story</button>
+    <button class="back-btn regen-btn" id="regenBtn">↻ Regenerate</button>
+  </div>
+</div>
+
+<script>
+/*@inline src/runtime.js*/
+</script>
+<script>
+/*@inline src/compile.js*/
+</script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- player (shared engine) ---------- */
+  var playerStage = document.getElementById('playerStage');
+  var player = WrapRuntime.createPlayer({
+    screen: document.getElementById('screen'),
+    container: document.getElementById('cardContainer'),
+    prevBtn: document.getElementById('prevBtn'),
+    nextBtn: document.getElementById('nextBtn'),
+    pageBar: document.getElementById('pageBar'),
+    tapLeft: document.getElementById('tapLeft'),
+    tapRight: document.getElementById('tapRight'),
+    keyGate: function () { return !playerStage.hidden; },
+    onLoaded: function (w) { document.title = w.name + ' — WRAP'; }
+  });
+
+  /* ---------- generation: browser call to the Anthropic API ---------- */
+  function getKey() {
+    try { return localStorage.getItem('anthropic_api_key') || ''; }
+    catch (e) { return ''; }
+  }
+  function setKey(v) {
+    try { localStorage.setItem('anthropic_api_key', v); return true; }
+    catch (e) { return false; }
+  }
+  function clearKey() {
+    try { localStorage.removeItem('anthropic_api_key'); } catch (e) {}
+  }
+
+  var GEN_TIMEOUT_MS = 180000; // 3 min — adaptive thinking on this task can run long
+
+  async function generate(storyText) {
+    var key = getKey();
+    if (!key) throw new Error('NO_KEY');
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, GEN_TIMEOUT_MS);
+    var res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-8',
+          max_tokens: 16000,
+          thinking: { type: 'adaptive' },
+          system: WrapCompiler.SYSTEM_PROMPT,
+          output_config: { format: { type: 'json_schema', schema: WrapCompiler.STORY_SCHEMA } },
+          messages: [{ role: 'user', content: 'Create a wrap for this story:\n\n' + storyText }]
+        })
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('Timed out after 3 minutes. Try again or shorten the prompt.');
+      throw new Error('Network error — check your connection and try again.');
+    }
+    clearTimeout(timer);
+    if (!res.ok) {
+      var errBody = null;
+      try { errBody = await res.json(); } catch (e) {}
+      var msg = (errBody && errBody.error && errBody.error.message) || ('HTTP ' + res.status);
+      throw new Error(msg);
+    }
+    var data = await res.json();
+    if (data.stop_reason === 'refusal') {
+      throw new Error('The model declined this request. Try rephrasing your story.');
+    }
+    if (data.stop_reason === 'max_tokens') {
+      throw new Error('The story came out too long — try a shorter prompt.');
+    }
+    var text = '';
+    (data.content || []).forEach(function (b) { if (b.type === 'text') text += b.text; });
+    return JSON.parse(text);
+  }
+
+  /* ---------- UI wiring ---------- */
+  var homeView = document.getElementById('homeView');
+  var storyInput = document.getElementById('storyInput');
+  var generateBtn = document.getElementById('generateBtn');
+  var sampleBtn = document.getElementById('sampleBtn');
+  var loading = document.getElementById('loading');
+  var errorBox = document.getElementById('errorBox');
+  var keyInput = document.getElementById('keyInput');
+  var keyDetails = document.getElementById('keyDetails');
+  var lastStoryText = '';
+
+  keyInput.value = getKey();
+  document.getElementById('saveKeyBtn').addEventListener('click', function () {
+    if (setKey(keyInput.value.trim())) { keyDetails.open = false; }
+    else { showError('This browser is blocking local storage, so the key can’t be saved here.'); }
+  });
+  document.getElementById('clearKeyBtn').addEventListener('click', function () {
+    clearKey(); keyInput.value = '';
+  });
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.hidden = false;
+  }
+  function showPlayer(story) {
+    try {
+      var wrap = WrapCompiler.compileWrap(story);
+      if (wrap.cards.length < 2) throw new Error('Empty wrap');
+      homeView.classList.add('hidden');
+      playerStage.hidden = false;
+      player.loadWrap(wrap);
+    } catch (e) {
+      showError('Could not render the generated wrap: ' + e.message);
+    }
+  }
+  function showHome() {
+    playerStage.hidden = true;
+    homeView.classList.remove('hidden');
+  }
+  document.getElementById('backBtn').addEventListener('click', showHome);
+  document.getElementById('regenBtn').addEventListener('click', function () {
+    showHome();
+    if (lastStoryText) runGenerate(lastStoryText);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!playerStage.hidden && e.key === 'Escape') showHome();
+  });
+
+  async function runGenerate(text) {
+    errorBox.hidden = true;
+    if (!getKey()) {
+      keyDetails.open = true;
+      showError('Add your Anthropic API key first (or use “Try a sample”).');
+      return;
+    }
+    generateBtn.disabled = true; sampleBtn.disabled = true;
+    loading.hidden = false;
+    lastStoryText = text;
+    try {
+      var story = await generate(text);
+      showPlayer(story);
+    } catch (e) {
+      showError(e.message === 'NO_KEY'
+        ? 'Add your Anthropic API key first (or use “Try a sample”).'
+        : 'Generation failed: ' + e.message);
+    } finally {
+      generateBtn.disabled = false; sampleBtn.disabled = false;
+      loading.hidden = true;
+    }
+  }
+
+  generateBtn.addEventListener('click', function () {
+    var text = storyInput.value.trim();
+    if (!text) { showError('Tell a story first — a sentence or two is enough.'); return; }
+    runGenerate(text);
+  });
+  storyInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generateBtn.click();
+  });
+
+  sampleBtn.addEventListener('click', function () {
+    errorBox.hidden = true;
+    showPlayer(WrapCompiler.SAMPLE);
+  });
+})();
+</script>
