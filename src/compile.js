@@ -1,13 +1,13 @@
-/* WrapCompiler — semantic story cards → primitive layout nodes.
+/* BookCompiler — semantic story cards → primitive layout nodes.
  * The generation contract lives here in one place: the JSON schema the model
  * must emit (STORY_SCHEMA), the prompt that teaches it the card types
  * (SYSTEM_PROMPT), the compiler that maps those cards onto the layouts
- * reverse-engineered from real wraps, and a schema-exercising SAMPLE.
- * Depends on WrapRuntime (escapeHtml). */
+ * reverse-engineered from real wrap.co examples, and a schema-exercising SAMPLE.
+ * Depends on BookRuntime (escapeHtml). */
 (function (global) {
   'use strict';
 
-  var escapeHtml = global.WrapRuntime.escapeHtml;
+  var escapeHtml = global.BookRuntime.escapeHtml;
 
   function fitFont(text, base, perChar) {
     var len = (text || '').length;
@@ -37,7 +37,7 @@
   var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: '910px' };
 
   /* Layout constants below (30px cover inset, headline at y=590, gallery text at
-   * 555/615/700, ...) are the geometry reverse-engineered from real wraps. */
+   * 555/615/700, ...) are the geometry reverse-engineered from real wrap.co examples. */
   function compileCard(c) {
     var k = [];
     var t = c.type;
@@ -118,13 +118,13 @@
     return null;
   }
 
-  function compileWrap(story) {
+  function compileBook(story) {
     var out = { name: story.name || 'Untitled', cards: [] };
     (story.cards || []).forEach(function (c) {
       var compiled = compileCard(c || {});
       if (compiled) out.cards.push(compiled);
     });
-    // end-of-wrap card, always appended
+    // end-of-book card, always appended
     out.cards.push({
       bg: '#2e2d2c',
       k: [{ t: 'end', css: { position: 'absolute', top: '215px', left: '0px', width: '640px', height: '480px' } }]
@@ -186,8 +186,8 @@
   };
 
   var SYSTEM_PROMPT = [
-    'You are a story designer for WRAP, a mobile flip-book format: a phone-sized stack of full-screen cards the reader swipes through.',
-    'Given a story idea, compose a wrap of 5 to 8 cards using these card types:',
+    'You are a story designer for BOOK, a mobile flip-book format: a phone-sized stack of full-screen cards the reader swipes through.',
+    'Given a story idea, compose a book of 5 to 8 cards using these card types:',
     '- cover: the opening card. title (2-4 words, evocative) + kicker (a one-line subtitle). Always first.',
     '- prose: a narrative beat. kicker (optional small line), title (2-5 words), body (2-4 sentences, warm and concrete).',
     '- gallery: 3-4 moments the reader scrolls through vertically. Each item: kicker (place/context, 1-3 words), title (2-3 words), body (1-2 sentences).',
@@ -198,7 +198,7 @@
     '',
     'Every card and gallery item needs an image: h1 and h2 are HSL hues 0-359 chosen to evoke the scene (the renderer draws a dark duotone gradient - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340). label is a 2-5 word description of the photo that WOULD be there (e.g. "sunset over the pier").',
     '',
-    'Rules: exactly one cover, first. Vary card types. Choose hues that flow like a color story across the wrap. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole wrap.',
+    'Rules: exactly one cover, first. Vary card types. Choose hues that flow like a color story across the book. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.',
     'Write with specificity and heart. Use the user\'s details; invent tasteful specifics where needed.'
   ].join('\n');
 
@@ -227,8 +227,8 @@
     ]
   };
 
-  global.WrapCompiler = {
-    compileWrap: compileWrap,
+  global.BookCompiler = {
+    compileBook: compileBook,
     STORY_SCHEMA: STORY_SCHEMA,
     SYSTEM_PROMPT: SYSTEM_PROMPT,
     SAMPLE: SAMPLE

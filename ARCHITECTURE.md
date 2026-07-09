@@ -1,4 +1,4 @@
-# WRAP — Architecture
+# BOOK — Architecture
 
 Where this project is and where it's going: from three static pages with a
 bring-your-own-key composer to a hosted service that hundreds of people can
@@ -9,16 +9,16 @@ funded by Azure credits.
 
 ```
 GitHub Pages (static)
-├── index.html    Wrap Composer — story → Claude → semantic JSON → compiler → player
-├── player.html   Wrap Library — 7 reverse-engineered wraps
+├── index.html    Book Composer — story → Claude → semantic JSON → compiler → player
+├── player.html   Book Library — 7 reverse-engineered wrap.co examples
 └── howwemet.html Handcrafted reconstruction (frozen artifact, not built)
 
 src/                     single source of truth, assembled by build.py
-├── runtime.js           WrapRuntime — renderer (15 component types) + flip engine
-├── compile.js           WrapCompiler — story schema, system prompt, layout compiler
+├── runtime.js           BookRuntime — renderer (15 component types) + flip engine
+├── compile.js           BookCompiler — story schema, system prompt, layout compiler
 ├── runtime.css          player stage, card mechanics, component styles
 ├── fonts.css            Montserrat / Josefin Slab / Open Sans as data-URI woff2
-├── data/wraps-data.js   embedded library wraps
+├── data/books-data.js   embedded library examples
 └── pages/               page templates (chrome + wiring only)
 ```
 
@@ -32,9 +32,9 @@ security fix (the `safeUrl` allowlist) had to be applied twice.
 **The core design decision that scales:** the LLM emits a small *semantic*
 story schema (cover / prose / gallery / quote / product / video / map — copy
 and color moods only). A deterministic compiler maps it onto layouts
-reverse-engineered from real wraps. The model never positions pixels, so
+reverse-engineered from real wrap.co examples. The model never positions pixels, so
 output is always well-designed, token counts stay small, rendering is
-instant, and stored wraps are tiny JSON documents. Everything below builds
+instant, and stored books are tiny JSON documents. Everything below builds
 on that contract.
 
 ## Target (Azure)
@@ -48,13 +48,13 @@ on that contract.
                              │
               ┌──────────────┼──────────────────────┐
               ▼              ▼                      ▼
-   POST /api/generate   GET /api/gallery      GET /api/wraps/{id}
+   POST /api/generate   GET /api/gallery      GET /api/books/{id}
               │              │                      │
               ▼              └──────────┬───────────┘
    ┌─────────────────────┐             ▼
    │ Claude on Microsoft │   ┌──────────────────────┐
    │ Foundry             │   │ Cosmos DB serverless │
-   │ (claude-opus-4-8,   │   │ wraps + gallery feed │
+   │ (claude-opus-4-8,   │   │ books + gallery feed │
    │  structured outputs,│   └──────────────────────┘
    │  web search tool)   │             ▲
    └─────────┬───────────┘             │
@@ -67,7 +67,7 @@ on that contract.
    │ gpt-image-1         │
    └─────────────────────┘
 
-   Azure AI Content Safety — moderation gate before a wrap goes public
+   Azure AI Content Safety — moderation gate before a book goes public
    Application Insights — tracing, cost metering, error rates
    API Management (later) — subscription tiers, when accounts arrive
 ```
@@ -79,17 +79,17 @@ on that contract.
 | Hosting + API | **Azure Static Web Apps** | One resource serves the static pages *and* a managed Functions API under the same origin — no CORS, no separate app service. Free/Standard tiers are covered pennies by credits. |
 | Generation | **Azure Function `POST /api/generate`** | Moves the Anthropic call server-side. This ends bring-your-own-key: visitors just type a story. Also the single choke point for rate limits, moderation, and metering. |
 | Model access | **Claude on Microsoft Foundry** (`claude-opus-4-8`) | Bills against Azure credits instead of an Anthropic account card. The Anthropic SDK's `AnthropicFoundry` client keeps the same Messages API surface — the prompt, schema, and compiler contract move over unchanged. Beta status is the top spike risk (see checklist). |
-| Wrap storage | **Cosmos DB serverless** | Wraps are small JSON docs read by id plus one feed query — exactly the serverless Cosmos sweet spot. Pay-per-request rounds to ~zero at hundreds of users; no capacity to manage. |
+| Book storage | **Cosmos DB serverless** | Books are small JSON docs read by id plus one feed query — exactly the serverless Cosmos sweet spot. Pay-per-request rounds to ~zero at hundreds of users; no capacity to manage. |
 | Gallery feed | Cosmos + `GET /api/gallery` | The discovery gallery is a rebuild of wrap.co's `/examples/` grid. Thumbnails are live mini-renders of the first card (the runtime scaled down in CSS) — no screenshot service needed. |
-| Images | **Azure OpenAI `gpt-image-1`**, 1024×1536 portrait | The compiler already emits an image *slot* per card (label + duotone hues). Generation fills the slot; the gradient stays as the instant placeholder while images arrive, so wraps are viewable immediately. |
-| Image fan-out | **Durable Functions** | A wrap needs 5–10 images; generating them inline would hold the HTTP call open for minutes. The orchestration fans out per-image activities, writes each to Blob as it lands, and the player upgrades placeholders progressively. |
+| Images | **Azure OpenAI `gpt-image-1`**, 1024×1536 portrait | The compiler already emits an image *slot* per card (label + duotone hues). Generation fills the slot; the gradient stays as the instant placeholder while images arrive, so books are viewable immediately. |
+| Image fan-out | **Durable Functions** | A book needs 5–10 images; generating them inline would hold the HTTP call open for minutes. The orchestration fans out per-image activities, writes each to Blob as it lands, and the player upgrades placeholders progressively. |
 | Image serving | **Blob Storage + Azure CDN** | Immutable content-addressed blobs, cache-forever headers. |
 | Web grounding | **Claude's server-side web search tool** | "Launch story for my bakery" can pull real hours/address; product cards get real URLs. Server-side tool — zero orchestration code in the Function, works only once generation is server-side. |
-| Moderation | **Azure AI Content Safety** | Public gallery means user content needs a gate. Text at generate time; images before publish. Ephemeral (private) wraps skip the strict gate. |
+| Moderation | **Azure AI Content Safety** | Public gallery means user content needs a gate. Text at generate time; images before publish. Ephemeral (private) books skip the strict gate. |
 | Observability | **Application Insights** | Per-generation traces: tokens, latency, cost, failure class. This is how credits burn gets watched. |
 | Accounts/tiers | **API Management — deferred** | Auth and subscription tiers are parked by decision; APIM slots in front of the API later without touching the Functions. |
 
-### Wrap lifecycle
+### Book lifecycle
 
 ```
 ephemeral ──(user taps Share)──▶ unlisted (link-only, light moderation)
@@ -99,12 +99,12 @@ ephemeral ──(user taps Share)──▶ unlisted (link-only, light moderation
 ```
 
 - **ephemeral** — generated, playable, stored with a TTL (Cosmos TTL field),
-  never listed. Most wraps end here; storage cost stays flat.
-- **unlisted** — permanent id, shareable URL (`/w/{id}`), not in the feed.
+  never listed. Most books end here; storage cost stays flat.
+- **unlisted** — permanent id, shareable URL (`/b/{id}`), not in the feed.
 - **published** — appears in the gallery after the Content Safety gate.
 
-Add `formatVersion: 1` to every stored wrap document from day one — stored
-wraps outlive renderer revisions, and versioning is free now and painful
+Add `formatVersion: 1` to every stored book document from day one — stored
+books outlive renderer revisions, and versioning is free now and painful
 retroactively.
 
 ### Scaling honestly stated
@@ -114,19 +114,21 @@ the only real cost is model tokens and image generations. The architecture
 doesn't need to change until ~10⁵ users, and the bottleneck then is Foundry
 rate limits (request a quota bump), not the storage or hosting.
 
-Ballpark per wrap: one Opus generation (~$0.10–0.30 with thinking) plus
-6–8 gpt-image-1 portraits (~$0.15–0.50). Call it **≤ $1/wrap worst case**;
-1,000 generated wraps ≈ low hundreds of dollars — inside credits. App
+Ballpark per book: one Opus generation (~$0.10–0.30 with thinking) plus
+6–8 gpt-image-1 portraits (~$0.15–0.50). Call it **≤ $1/book worst case**;
+1,000 generated books ≈ low hundreds of dollars — inside credits. App
 Insights dashboards + a daily budget alert are the guardrail, with a
 per-IP rate limit (n generations/day) in the Function until accounts exist.
 
 ## Deploying phase 2 (persistence + share links)
 
 The repo is already SWA-shaped: static pages at the root, managed API in
-`api/`, `staticwebapp.config.json` for the `/w/{id}` rewrite. To go live:
+`api/`, `staticwebapp.config.json` for the `/b/{id}` rewrite. To go live:
 
 1. **Cosmos DB** — create a serverless account; database `wrap`, container
-   `wraps` with partition key `/id`.
+   `wraps` with partition key `/id`. (These infrastructure names
+   predate the BOOK rename and are kept; override with `COSMOS_DATABASE` /
+   `COSMOS_CONTAINER` if you name them differently.)
 2. **Static Web App** — create (Free tier is fine to start), link it to
    this GitHub repo; app location `/`, api location `api`, no build
    command (pages are pre-built and committed). Azure adds its own deploy
@@ -134,7 +136,7 @@ The repo is already SWA-shaped: static pages at the root, managed API in
 3. **App settings** on the SWA: `COSMOS_CONNECTION_STRING` (or
    `COSMOS_ENDPOINT` + `COSMOS_KEY`).
 4. Smoke test: open the composer on the SWA URL, Try a sample → Share →
-   the copied `/w/{id}` link plays in a fresh browser.
+   the copied `/b/{id}` link plays in a fresh browser.
 
 Stored documents are `{ id, formatVersion: 1, visibility: 'unlisted',
 story, createdAt }` — the semantic story, not compiled layout, so the
@@ -165,8 +167,8 @@ preferred.
 1. **✅ Shared runtime + real build** — `src/` modules, `build.py`, CI
    drift guard. Ends copy-paste divergence.
 2. **✅ (code) Persistence + share links** — `api/` Functions
-   (`POST /api/wraps` validates + stores the *story* JSON, `GET
-   /api/wraps/{id}` serves it), `/w/{id}` viewer page that recompiles with
+   (`POST /api/books` validates + stores the *story* JSON, `GET
+   /api/books/{id}` serves it), `/b/{id}` viewer page that recompiles with
    the current layouts, Share button in the composer,
    `staticwebapp.config.json`. Needs the Azure deploy below to go live;
    until then GitHub Pages keeps working and Share degrades gracefully.

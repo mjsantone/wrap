@@ -1,4 +1,4 @@
-<title>WRAP</title>
+<title>BOOK</title>
 
 <style>
 /*@inline src/fonts.css*/
@@ -13,7 +13,7 @@
   }
   .make-btn:hover, .make-btn:focus-visible { opacity: 1; }
 
-  /* loading / error states fill the screen before a wrap arrives */
+  /* loading / error states fill the screen before a book arrives */
   .state {
     position: absolute; inset: 0; z-index: 1005; background: #0d0e10;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -61,8 +61,8 @@
     <a class="make-btn" href="/">✦ Make your own</a>
 
     <div class="state" id="stateBox">
-      <h1 class="wordmark">WR<b>A</b>P</h1>
-      <p id="stateMsg">Opening this wrap…</p>
+      <h1 class="wordmark">BO<b>O</b>K</h1>
+      <p id="stateMsg">Opening this book…</p>
       <div class="sk-spinner-wave" id="stateSpinner">
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
@@ -85,7 +85,7 @@
   var stateMsg = document.getElementById('stateMsg');
   var stateSpinner = document.getElementById('stateSpinner');
 
-  var player = WrapRuntime.createPlayer({
+  var player = BookRuntime.createPlayer({
     screen: document.getElementById('screen'),
     container: document.getElementById('cardContainer'),
     prevBtn: document.getElementById('prevBtn'),
@@ -95,39 +95,39 @@
     tapRight: document.getElementById('tapRight'),
     keyGate: function () { return stateBox.hidden; },
     dragGate: function () { return stateBox.hidden; },
-    onLoaded: function (w) { document.title = w.name + ' — WRAP'; }
+    onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
 
   function fail(msg) {
     stateSpinner.hidden = true;
-    stateMsg.innerHTML = msg + '<br><br><a href="/">Make a wrap of your own →</a>';
+    stateMsg.innerHTML = msg + '<br><br><a href="/">Make a book of your own →</a>';
   }
 
-  /* id from the /w/{id} rewrite path, with ?id= as a fallback */
-  var m = location.pathname.match(/\/w\/([1-9A-HJ-NP-Za-km-z]{8,24})/);
+  /* id from the /b/{id} rewrite path, with ?id= as a fallback */
+  var m = location.pathname.match(/\/b\/([1-9A-HJ-NP-Za-km-z]{8,24})/);
   var id = (m && m[1]) || new URLSearchParams(location.search).get('id');
 
   if (!id) {
-    fail('This link is missing its wrap id.');
+    fail('This link is missing its book id.');
     return;
   }
 
-  fetch('/api/wraps/' + encodeURIComponent(id))
+  fetch('/api/books/' + encodeURIComponent(id))
     .then(function (res) {
       if (res.status === 404) throw new Error('NOT_FOUND');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     })
     .then(function (doc) {
-      var wrap = WrapCompiler.compileWrap(doc.story || {});
-      if (wrap.cards.length < 2) throw new Error('EMPTY');
+      var book = BookCompiler.compileBook(doc.story || {});
+      if (book.cards.length < 2) throw new Error('EMPTY');
       stateBox.hidden = true;
-      player.loadWrap(wrap);
+      player.loadBook(book);
     })
     .catch(function (e) {
-      if (e && e.message === 'NOT_FOUND') fail('This wrap doesn’t exist — the link may be mistyped or the wrap was removed.');
-      else if (e && e.message === 'EMPTY') fail('This wrap has no cards to show.');
-      else fail('Couldn’t load this wrap right now. Check your connection and refresh.');
+      if (e && e.message === 'NOT_FOUND') fail('This book doesn’t exist — the link may be mistyped or the book was removed.');
+      else if (e && e.message === 'EMPTY') fail('This book has no cards to show.');
+      else fail('Couldn’t load this book right now. Check your connection and refresh.');
     });
 })();
 </script>
