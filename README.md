@@ -132,9 +132,9 @@ The outputs stay committed so GitHub Pages serves them directly; the
 `build-check` workflow rejects commits where they drift from `src/`.
 `howwemet.html` is a hand-crafted reconstruction and is not built.
 
-Naming note: the repo, the Cosmos database defaults (`wrap`/`wraps`), and
-wrap.co references are intentionally unchanged — they're infrastructure and
-provenance, decoupled from the BOOK branding. The Cosmos names are overridable
+Naming note: the repo name and
+wrap.co references are intentionally unchanged — they're
+provenance, decoupled from the BOOK branding. Cosmos names default to `book`/`books`, overridable
 via `COSMOS_DATABASE` / `COSMOS_CONTAINER`.
 
 Where this is heading — hosting, server-side generation, the discovery
