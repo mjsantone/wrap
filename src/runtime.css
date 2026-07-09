@@ -1,0 +1,149 @@
+/* WrapRuntime styles — the player stage, card flip mechanics, and every
+ * rendered component. Shared by all pages; page chrome lives in each page. */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: #000; }
+
+.player-stage {
+  position: fixed; inset: 0; margin: 0; background: #000;
+  display: grid; place-items: center;
+  font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+  overflow: hidden;
+}
+.player-stage[hidden] { display: none; }
+.screen {
+  position: relative;
+  width: min(100vw, calc(100vh * 640 / 910));
+  aspect-ratio: 640 / 910;
+  background: #000; overflow: hidden;
+  touch-action: pan-y;
+}
+
+/* ---- WRAP card mechanics (values from wrap.co/wraps/main.css) ---- */
+.card-container {
+  position: absolute; inset: 0; background: #000;
+  perspective: 2000px; perspective-origin: left center;
+}
+.card {
+  position: absolute; inset: 0; overflow: hidden;
+  transform-origin: 0 0; transform: rotateY(0deg);
+  transition: transform 0.7s cubic-bezier(0.26, 0.65, 0.37, 1.07);
+  will-change: transform; background: #fff;
+}
+.card.turned { transform: rotateY(-90deg); }
+.card .fold {
+  position: absolute; inset: 0; z-index: 990; pointer-events: none;
+  background: linear-gradient(100deg, rgba(0,0,0,0.55), rgba(0,0,0,0.05) 60%);
+  opacity: 0; transition: opacity 0.7s cubic-bezier(0.26, 0.65, 0.37, 1.07);
+}
+.card.turned .fold { opacity: 1; }
+@keyframes bounceCardHintAnimation {
+  0%, 40%, 57%, 100% { animation-timing-function: cubic-bezier(0.215,0.61,0.355,1); transform: rotateY(0rad); }
+  30% { animation-timing-function: cubic-bezier(0.755,0.05,0.855,0.06); transform: rotateY(-0.6rad); }
+  50% { animation-timing-function: cubic-bezier(0.755,0.05,0.855,0.06); transform: rotateY(-0.2rad); }
+}
+.card.animate-swipe-hint { animation: 1.9s 2s 1 bounceCardHintAnimation; }
+
+.canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; }
+.canvas p { margin: 0 0 0.4em; }
+.canvas p:last-child { margin-bottom: 0; }
+
+/* ---- rendered components ---- */
+.cmp { position: absolute; margin: 0; }
+.cmp-image { overflow: hidden; }
+.img-ph { position: absolute; inset: 0; display: grid; place-items: center; }
+.img-ph span {
+  font-family: 'Montserrat', sans-serif; font-size: 15px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); text-align: center;
+  border: 1px solid rgba(255,255,255,0.22); border-radius: 999px; padding: 8px 18px;
+  max-width: 80%;
+}
+.cmp-gradation { pointer-events: none;
+  background: linear-gradient(180deg, rgba(22,23,24,0) 38%, rgba(22,23,24,0.55) 72%, rgba(22,23,24,0.85) 100%); }
+.cmp-veil { pointer-events: none; background: rgba(16,17,20,0.45); }
+.cmp-outline { pointer-events: none; }
+.cmp-outline::after { content: ""; position: absolute; inset: 40px; border: 3px solid rgba(253,254,255,0.92); }
+.cmp-action { display: block; z-index: 900; }
+.cmp-button { display: grid; place-items: center; white-space: nowrap; }
+.cmp-location {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: #fff; text-decoration: none; font-size: 24px;
+  border: 2px solid rgba(255,255,255,0.85); border-radius: 6px;
+  background: rgba(0,0,0,0.25) !important;
+}
+.cmp-map { display: block; overflow: hidden; text-decoration: none; }
+.cmp-map > svg.map-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cmp-map .map-pin {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.cmp-map .map-pin span {
+  font-family: 'Open Sans', sans-serif; font-size: 28px; color: #fff;
+  background: rgba(0,0,0,0.55); border-radius: 8px; padding: 10px 22px;
+  max-width: 80%; text-align: center;
+}
+.cmp-flow {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  color: #fff; font-size: 28px; font-family: 'Open Sans', sans-serif;
+  border: 2px solid rgba(255,255,255,0.85); border-radius: 10px;
+  background: rgba(0,0,0,0.3);
+}
+.cmp-youtube { display: block; }
+.cmp-youtube svg { width: 100%; height: 100%; display: block; transition: transform 0.15s ease; }
+.cmp-youtube:hover svg { transform: scale(1.08); }
+.cmp-widget {
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; text-decoration: none; font-size: 26px; font-family: 'Open Sans', sans-serif;
+  border: 2px solid rgba(255,255,255,0.9); border-radius: 8px;
+  background: rgba(0,0,0,0.3) !important;
+  transition: background 0.2s;
+}
+.cmp-widget:hover { background: rgba(159,204,58,0.35) !important; }
+.cmp-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.cmp-end p { color: #fff; font-weight: 200; font-size: 26px; margin: 5px 0; font-family: 'Open Sans', sans-serif; max-width: 85%; }
+.cmp-end .end-wordmark { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: 0.14em; color: #fff; margin-top: 6px; }
+.cmp-end .end-wordmark b { color: #9fcc3a; }
+.cmp-end .replay {
+  margin-top: 28px; cursor: pointer; font-family: 'Open Sans', sans-serif; font-size: 22px;
+  color: #fff; background: #434343; border: none; border-radius: 3px; padding: 12px 40px;
+  box-shadow: 0 2px 0 rgba(35,31,32,0.25); transition: all 0.2s ease-in-out;
+}
+.cmp-end .replay:hover { background: #9fcc3a; color: #212121; }
+
+/* ---- galleries ---- */
+.cmp-gallery { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  scroll-snap-type: y mandatory; scrollbar-width: none; }
+.cmp-gallery::-webkit-scrollbar { display: none; }
+.cmp-gallery-item { position: relative; width: 640px; height: 910px; scroll-snap-align: start; overflow: hidden; }
+.gallery-hint {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 970; color: #fff; opacity: 0.75; pointer-events: none;
+  animation: hintBob 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8)); transition: opacity 0.4s;
+}
+.gallery-hint.hidden { opacity: 0; }
+@keyframes hintBob { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 8px); } }
+
+/* ---- player chrome ---- */
+.pagination-track { position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+  background: #000; z-index: 1000; pointer-events: none; overflow: hidden; }
+.pagination-track .current-page { position: absolute; height: 100%; background: #9fcc3a; transition: left 0.12s ease-out; }
+.pv-btn {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 995;
+  width: 46px; height: 70px; border: none; background: transparent; cursor: pointer;
+  color: #fff; opacity: 0.15; transition: opacity 0.25s ease-out;
+  display: grid; place-items: center; padding: 0;
+}
+.pv-btn:hover, .pv-btn:focus-visible { opacity: 0.9; }
+.pv-btn:focus-visible { outline: 2px solid #9fcc3a; outline-offset: -4px; border-radius: 8px; }
+.pv-btn[hidden] { display: none; }
+.pv-btn.prev { left: 2px; } .pv-btn.next { right: 2px; }
+.pv-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
+.tap-zone { position: absolute; top: 60px; bottom: 40px; width: 15%; z-index: 960; cursor: pointer; }
+.tap-zone.left { left: 0; } .tap-zone.right { right: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .card .fold { transition: none; }
+  .card.animate-swipe-hint, .gallery-hint { animation: none; }
+}
