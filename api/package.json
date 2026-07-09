@@ -11,6 +11,8 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@anthropic-ai/foundry-sdk": "^0.4.0",
+    "@anthropic-ai/sdk": "^0.110.0",
     "@azure/cosmos": "^4.2.0",
     "@azure/functions": "^4.6.0"
   }

@@ -142,6 +142,20 @@ viewer always renders with the current compiler. The validator rebuilds a
 clean copy field-by-field (unknown fields dropped, strings capped, ≤12
 cards, ≤64 KB) since this is an open write endpoint until accounts exist.
 
+## Deploying phase 3 (hosted generation)
+
+One app setting on the Static Web App, no redeploy needed:
+
+- **Anthropic direct (works today):** `ANTHROPIC_API_KEY` = a key from
+  platform.claude.com (set a monthly spend limit on it).
+- **Foundry (Azure credits, beta):** deploy a Claude model in a Microsoft
+  Foundry resource, then set `ANTHROPIC_FOUNDRY_RESOURCE` (the resource
+  name) and `ANTHROPIC_FOUNDRY_API_KEY`. Structured outputs and adaptive
+  thinking are beta on Foundry — run the spike checklist below first.
+
+Smoke test: type a story on the SWA site with no browser key saved →
+a book should generate server-side.
+
 ## Spike checklist (do these before building on Foundry)
 
 1. **Foundry model availability** — is `claude-opus-4-8` deployable in your
@@ -164,14 +178,29 @@ preferred.
 
 1. **✅ Shared runtime + real build** — `src/` modules, `build.py`, CI
    drift guard. Ends copy-paste divergence.
-2. **✅ (code) Persistence + share links** — `api/` Functions
+2. **✅ Persistence + share links** — `api/` Functions
    (`POST /api/books` validates + stores the *story* JSON, `GET
    /api/books/{id}` serves it), `/b/{id}` viewer page that recompiles with
    the current layouts, Share button in the composer,
-   `staticwebapp.config.json`. Needs the Azure deploy below to go live;
-   until then GitHub Pages keeps working and Share degrades gracefully.
-3. **Server-side generation** — `/api/generate` on Foundry; remove the
-   BYO-key UI; per-IP rate limit; App Insights metering.
+   `staticwebapp.config.json`. Live on the Static Web App.
+3. **✅ (code) Server-side generation** — `POST /api/generate` turns a
+   visitor's story text into the semantic story JSON via Claude, so
+   visitors don't need their own API key. The generation contract (JSON
+   schema + system prompt) lives once in `api/src/contract/` and is
+   inlined into the composer at build time. The client is picked by
+   environment: `ANTHROPIC_FOUNDRY_RESOURCE` + `ANTHROPIC_FOUNDRY_API_KEY`
+   (Claude on Microsoft Foundry — bills Azure credits, beta) or
+   `ANTHROPIC_API_KEY` (Anthropic direct — works today). Set either on
+   the SWA and hosted generation lights up; with neither, the composer
+   falls back to the bring-your-own-key browser path. Per-IP rate limit
+   (`GENERATION_RATE_LIMIT`, default 10/hour, best-effort per instance);
+   tunables `GENERATION_MODEL` (default `claude-opus-4-8`),
+   `GENERATION_EFFORT` (default `medium`), `GENERATION_TIMEOUT_MS`
+   (default 40000 — SWA managed functions cap responses at ~45 s, so
+   generation runs at bounded effort and aborts with a real error
+   before the platform severs the connection; if p95 latency crowds
+   the cap, the options are lower effort, bring-your-own Functions
+   instead of managed, or a queue-and-poll pattern).
 4. **Gallery** — publish flow, Content Safety gate, `/api/gallery` feed,
    live mini-render thumbnails.
 5. **Images + search** — Durable fan-out to gpt-image-1, progressive
