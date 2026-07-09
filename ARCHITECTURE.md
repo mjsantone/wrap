@@ -120,6 +120,28 @@ Ballpark per wrap: one Opus generation (~$0.10–0.30 with thinking) plus
 Insights dashboards + a daily budget alert are the guardrail, with a
 per-IP rate limit (n generations/day) in the Function until accounts exist.
 
+## Deploying phase 2 (persistence + share links)
+
+The repo is already SWA-shaped: static pages at the root, managed API in
+`api/`, `staticwebapp.config.json` for the `/w/{id}` rewrite. To go live:
+
+1. **Cosmos DB** — create a serverless account; database `wrap`, container
+   `wraps` with partition key `/id`.
+2. **Static Web App** — create (Free tier is fine to start), link it to
+   this GitHub repo; app location `/`, api location `api`, no build
+   command (pages are pre-built and committed). Azure adds its own deploy
+   workflow alongside `build-check`.
+3. **App settings** on the SWA: `COSMOS_CONNECTION_STRING` (or
+   `COSMOS_ENDPOINT` + `COSMOS_KEY`).
+4. Smoke test: open the composer on the SWA URL, Try a sample → Share →
+   the copied `/w/{id}` link plays in a fresh browser.
+
+Stored documents are `{ id, formatVersion: 1, visibility: 'unlisted',
+story, createdAt }` — the semantic story, not compiled layout, so the
+viewer always renders with the current compiler. The validator rebuilds a
+clean copy field-by-field (unknown fields dropped, strings capped, ≤12
+cards, ≤64 KB) since this is an open write endpoint until accounts exist.
+
 ## Spike checklist (do these before building on Foundry)
 
 1. **Foundry model availability** — is `claude-opus-4-8` deployable in your
@@ -140,10 +162,14 @@ preferred.
 
 ## Phased roadmap
 
-1. **✅ Shared runtime + real build** (this phase) — `src/` modules,
-   `build.py`, CI drift guard. Ends copy-paste divergence.
-2. **Persistence + share links** — SWA + Functions + Cosmos; `POST /api/wraps`
-   stores compiled wraps; `/w/{id}` share URLs; ephemeral TTL + unlisted.
+1. **✅ Shared runtime + real build** — `src/` modules, `build.py`, CI
+   drift guard. Ends copy-paste divergence.
+2. **✅ (code) Persistence + share links** — `api/` Functions
+   (`POST /api/wraps` validates + stores the *story* JSON, `GET
+   /api/wraps/{id}` serves it), `/w/{id}` viewer page that recompiles with
+   the current layouts, Share button in the composer,
+   `staticwebapp.config.json`. Needs the Azure deploy below to go live;
+   until then GitHub Pages keeps working and Share degrades gracefully.
 3. **Server-side generation** — `/api/generate` on Foundry; remove the
    BYO-key UI; per-IP rate limit; App Insights metering.
 4. **Gallery** — publish flow, Content Safety gate, `/api/gallery` feed,

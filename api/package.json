@@ -1,0 +1,17 @@
+{
+  "name": "wrap-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WRAP managed API for Azure Static Web Apps — wrap persistence and share links",
+  "main": "src/functions/*.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.2.0",
+    "@azure/functions": "^4.6.0"
+  }
+}

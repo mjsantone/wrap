@@ -1,0 +1,133 @@
+<title>WRAP</title>
+
+<style>
+/*@inline src/fonts.css*/
+/*@inline src/runtime.css*/
+
+  .make-btn {
+    position: absolute; top: 10px; left: 10px; z-index: 1010;
+    background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
+    padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+    text-decoration: none;
+  }
+  .make-btn:hover, .make-btn:focus-visible { opacity: 1; }
+
+  /* loading / error states fill the screen before a wrap arrives */
+  .state {
+    position: absolute; inset: 0; z-index: 1005; background: #0d0e10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 30px; gap: 10px;
+  }
+  .state[hidden] { display: none; }
+  .state .wordmark {
+    font-family: 'Montserrat', sans-serif; font-weight: 700;
+    font-size: 30px; letter-spacing: 0.16em; color: #fff; margin: 0 0 8px;
+  }
+  .state .wordmark b { color: #9fcc3a; }
+  .state p { color: #8a8d94; font-family: 'Open Sans', sans-serif; font-size: 15px; line-height: 1.6; margin: 0; max-width: 420px; }
+  .state a { color: #9fcc3a; text-decoration: none; }
+  .sk-spinner-wave { width: 200px; height: 45px; text-align: center; font-size: 10px; margin-top: 20px; }
+  .sk-spinner-wave div {
+    background-color: rgba(112,174,67,.9); height: 30px; width: 17px; display: inline-block;
+    animation: sk-waveStretchDelay 1.2s infinite ease-in-out; margin: 0 2px;
+  }
+  .sk-spinner-wave .sk-rect2 { animation-delay: -1.1s; }
+  .sk-spinner-wave .sk-rect3 { animation-delay: -1.0s; }
+  .sk-spinner-wave .sk-rect4 { animation-delay: -0.9s; }
+  .sk-spinner-wave .sk-rect5 { animation-delay: -0.8s; }
+  @keyframes sk-waveStretchDelay {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50% { opacity: 0.2; transform: scaleY(0.8); }
+  }
+</style>
+
+<div class="player-stage">
+  <div class="screen" id="screen">
+    <div class="card-container" id="cardContainer"></div>
+
+    <div class="tap-zone left"  id="tapLeft"  aria-hidden="true"></div>
+    <div class="tap-zone right" id="tapRight" aria-hidden="true"></div>
+
+    <button class="pv-btn prev" id="prevBtn" aria-label="Previous card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M16 3 L4 17 L16 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="pv-btn next" id="nextBtn" aria-label="Next card">
+      <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M4 3 L16 17 L4 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
+
+    <a class="make-btn" href="/">✦ Make your own</a>
+
+    <div class="state" id="stateBox">
+      <h1 class="wordmark">WR<b>A</b>P</h1>
+      <p id="stateMsg">Opening this wrap…</p>
+      <div class="sk-spinner-wave" id="stateSpinner">
+        <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
+        <div class="sk-rect4"></div><div class="sk-rect5"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*@inline src/runtime.js*/
+</script>
+<script>
+/*@inline src/compile.js*/
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var stateBox = document.getElementById('stateBox');
+  var stateMsg = document.getElementById('stateMsg');
+  var stateSpinner = document.getElementById('stateSpinner');
+
+  var player = WrapRuntime.createPlayer({
+    screen: document.getElementById('screen'),
+    container: document.getElementById('cardContainer'),
+    prevBtn: document.getElementById('prevBtn'),
+    nextBtn: document.getElementById('nextBtn'),
+    pageBar: document.getElementById('pageBar'),
+    tapLeft: document.getElementById('tapLeft'),
+    tapRight: document.getElementById('tapRight'),
+    keyGate: function () { return stateBox.hidden; },
+    dragGate: function () { return stateBox.hidden; },
+    onLoaded: function (w) { document.title = w.name + ' — WRAP'; }
+  });
+
+  function fail(msg) {
+    stateSpinner.hidden = true;
+    stateMsg.innerHTML = msg + '<br><br><a href="/">Make a wrap of your own →</a>';
+  }
+
+  /* id from the /w/{id} rewrite path, with ?id= as a fallback */
+  var m = location.pathname.match(/\/w\/([1-9A-HJ-NP-Za-km-z]{8,24})/);
+  var id = (m && m[1]) || new URLSearchParams(location.search).get('id');
+
+  if (!id) {
+    fail('This link is missing its wrap id.');
+    return;
+  }
+
+  fetch('/api/wraps/' + encodeURIComponent(id))
+    .then(function (res) {
+      if (res.status === 404) throw new Error('NOT_FOUND');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (doc) {
+      var wrap = WrapCompiler.compileWrap(doc.story || {});
+      if (wrap.cards.length < 2) throw new Error('EMPTY');
+      stateBox.hidden = true;
+      player.loadWrap(wrap);
+    })
+    .catch(function (e) {
+      if (e && e.message === 'NOT_FOUND') fail('This wrap doesn’t exist — the link may be mistyped or the wrap was removed.');
+      else if (e && e.message === 'EMPTY') fail('This wrap has no cards to show.');
+      else fail('Couldn’t load this wrap right now. Check your connection and refresh.');
+    });
+})();
+</script>

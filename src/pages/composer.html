@@ -91,6 +91,16 @@
   }
   .back-btn:hover, .back-btn:focus-visible { opacity: 1; }
   .regen-btn { left: auto; right: 10px; }
+  .share-btn { left: auto; right: 136px; }
+  .share-toast {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    z-index: 1015; max-width: 88%;
+    background: rgba(0,0,0,0.8); color: #fff; border-radius: 10px;
+    font-family: 'Open Sans', sans-serif; font-size: 13px; line-height: 1.5;
+    padding: 10px 16px; text-align: center; overflow-wrap: anywhere;
+  }
+  .share-toast[hidden] { display: none; }
+  .share-toast a { color: #9fcc3a; text-decoration: none; }
 </style>
 
 <!-- ================= Homepage ================= -->
@@ -155,7 +165,9 @@
     <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
 
     <button class="back-btn" id="backBtn">← New story</button>
+    <button class="back-btn share-btn" id="shareBtn">🔗 Share</button>
     <button class="back-btn regen-btn" id="regenBtn">↻ Regenerate</button>
+    <div class="share-toast" id="shareToast" hidden></div>
   </div>
 </div>
 
@@ -257,6 +269,7 @@
   var keyInput = document.getElementById('keyInput');
   var keyDetails = document.getElementById('keyDetails');
   var lastStoryText = '';
+  var lastStory = null;
 
   keyInput.value = getKey();
   document.getElementById('saveKeyBtn').addEventListener('click', function () {
@@ -277,6 +290,7 @@
       if (wrap.cards.length < 2) throw new Error('Empty wrap');
       homeView.classList.add('hidden');
       playerStage.hidden = false;
+      lastStory = story;
       player.loadWrap(wrap);
     } catch (e) {
       showError('Could not render the generated wrap: ' + e.message);
@@ -293,6 +307,49 @@
   });
   document.addEventListener('keydown', function (e) {
     if (!playerStage.hidden && e.key === 'Escape') showHome();
+  });
+
+  /* ---------- share: persist the story via the hosted API ---------- */
+  var shareBtn = document.getElementById('shareBtn');
+  var shareToast = document.getElementById('shareToast');
+  var toastTimer = null;
+
+  function toast(html, sticky) {
+    shareToast.innerHTML = html;
+    shareToast.hidden = false;
+    clearTimeout(toastTimer);
+    if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
+  }
+
+  shareBtn.addEventListener('click', async function () {
+    if (!lastStory) return;
+    shareBtn.disabled = true;
+    shareBtn.textContent = 'Sharing…';
+    try {
+      var res = await fetch('/api/wraps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story: lastStory })
+      });
+      if (!res.ok) {
+        var err = null;
+        try { err = await res.json(); } catch (e) {}
+        throw new Error((err && err.error) || ('HTTP ' + res.status));
+      }
+      var data = await res.json();
+      var link = location.origin + '/w/' + data.id;
+      var copied = false;
+      try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
+      toast((copied ? 'Link copied — ' : 'Your wrap link: ') +
+        '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>', true);
+    } catch (e) {
+      toast('Sharing isn’t available here' +
+        (e && e.message ? ' (' + WrapRuntime.escapeHtml(e.message) + ')' : '') +
+        ' — it needs the hosted API. See ARCHITECTURE.md.');
+    } finally {
+      shareBtn.disabled = false;
+      shareBtn.textContent = '🔗 Share';
+    }
   });
 
   async function runGenerate(text) {

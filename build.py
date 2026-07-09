@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent
 PAGES = {
     "src/pages/composer.html": "index.html",
     "src/pages/player.html": "player.html",
+    "src/pages/viewer.html": "w.html",
 }
 
 TOKEN = re.compile(r"/\*@inline ([^*]+?)\*/")
