@@ -7,6 +7,12 @@ and the card-flip engine. It works offline, on any phone or desktop browser.
 
 **Live site:** https://mjsantone.github.io/wrap/
 
+**Generic player:** https://mjsantone.github.io/wrap/player.html — renders any
+wrap from its JSON. Seven wraps are embedded (How We Met, Timberland Holiday
+Lookbook, QVC, Express Buy – Raiders, Assurance Auto Insurance, Portfolio:
+Designer, Akris Pre-Fall 2015); switch between them with the ≡ Library button
+or a `#w0`–`#w6` URL hash.
+
 ## What a wrap is
 
 A wrap is a phone-sized stack of full-bleed cards you flip through like a small
@@ -61,6 +67,24 @@ URIs).
 | Tap screen edges / chevrons | flip cards |
 | Scroll ↓ | move through a gallery card |
 
+## The generic player
+
+`player.html` is a schema-driven renderer: it walks a wrap's JSON component
+tree and reproduces each card at its exact geometry on the 640 × 910 canvas,
+inside the same flip mechanics. Component types supported — decoded across the
+seven embedded wraps:
+
+`card`, `textbox`, `image`, `box`, `gallery`, `gallery-item` (snap and
+free-scroll), `button`, `action` (hyperlink / `tel:` / `mailto:`), `location`
+(launcher button and full-card inline map), `youtube` (play button),
+`widget` (e.g. Typeform forms), `flow` (WRAP's native form), `background`,
+and `end`.
+
+To add a wrap: fetch `https://publisher.wrap.co/api/wraps/{id}/public`, slim
+it, and append it to the `window.WRAPS` array embedded in the file. Original
+photos live on assets.wrap.co and are replaced with deterministic gradient
+placeholders.
+
 ## Development
 
-There is no build step. Edit `index.html`, open it in a browser.
+There is no build step. Edit `index.html` or `player.html`, open in a browser.
