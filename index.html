@@ -239,10 +239,12 @@
     <div class="key-row">
       <input type="password" id="keyInput" placeholder="sk-ant-…" autocomplete="off"/>
       <button class="btn btn-ghost" id="saveKeyBtn" style="padding:11px 18px;">Save</button>
+      <button class="btn btn-ghost" id="clearKeyBtn" style="padding:11px 18px;">Clear</button>
     </div>
     <p class="key-note">Generation calls the Anthropic API directly from your browser.
       Your key is stored only in this browser (localStorage) and sent only to api.anthropic.com.
-      Get one at <a href="https://platform.claude.com" target="_blank" rel="noopener">platform.claude.com</a>.
+      Create a spend-limited key at
+      <a href="https://platform.claude.com" target="_blank" rel="noopener noreferrer">platform.claude.com</a>.
       “Try a sample” works without a key.</p>
   </details>
 
@@ -293,6 +295,13 @@
     for (var k in css) el.style.setProperty(k, css[k]);
     if (!css.position || css.position !== 'absolute') el.style.position = 'absolute';
   }
+  // Only allow safe link schemes — model-supplied URLs must never become javascript:/data: sinks.
+  function safeUrl(url) {
+    if (typeof url !== 'string') return null;
+    var u = url.trim();
+    if (/^(https?:|mailto:|tel:)/i.test(u)) return u;
+    return null;
+  }
   function grad(h1, h2) {
     return 'linear-gradient(160deg, hsl(' + h1 + ',30%,36%), hsl(' + h2 + ',34%,14%))';
   }
@@ -338,10 +347,11 @@
       el = document.createElement('a');
       el.className = 'cmp cmp-action';
       applyCss(el, node.css);
-      if (node.url && node.url !== 'http://' && node.url !== 'https://') {
-        el.href = node.url;
-        if (node.url.indexOf('tel:') !== 0 && node.url.indexOf('mailto:') !== 0) {
-          el.target = '_blank'; el.rel = 'noopener';
+      var au = safeUrl(node.url);
+      if (au && au !== 'http://' && au !== 'https://') {
+        el.href = au;
+        if (au.indexOf('tel:') !== 0 && au.indexOf('mailto:') !== 0) {
+          el.target = '_blank'; el.rel = 'noopener noreferrer';
         }
       }
     }
@@ -349,7 +359,8 @@
       el = document.createElement('a');
       el.className = 'cmp cmp-youtube';
       applyCss(el, node.css);
-      if (node.url) { el.href = node.url; el.target = '_blank'; el.rel = 'noopener'; }
+      var yu = safeUrl(node.url);
+      if (yu) { el.href = yu; el.target = '_blank'; el.rel = 'noopener noreferrer'; }
       el.setAttribute('aria-label', 'Play video');
       el.innerHTML = '<svg viewBox="0 0 100 100" aria-hidden="true">' +
         '<circle cx="50" cy="50" r="46" fill="rgba(0,0,0,0.45)" stroke="#fff" stroke-width="5"/>' +
@@ -724,28 +735,51 @@
     'Write with specificity and heart. Use the user\'s details; invent tasteful specifics where needed.'
   ].join('\n');
 
-  function getKey() { return localStorage.getItem('anthropic_api_key') || ''; }
+  function getKey() {
+    try { return localStorage.getItem('anthropic_api_key') || ''; }
+    catch (e) { return ''; }
+  }
+  function setKey(v) {
+    try { localStorage.setItem('anthropic_api_key', v); return true; }
+    catch (e) { return false; }
+  }
+  function clearKey() {
+    try { localStorage.removeItem('anthropic_api_key'); } catch (e) {}
+  }
+
+  var GEN_TIMEOUT_MS = 180000; // 3 min — adaptive thinking on this task can run long
 
   async function generate(storyText) {
     var key = getKey();
     if (!key) throw new Error('NO_KEY');
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-8',
-        max_tokens: 16000,
-        thinking: { type: 'adaptive' },
-        system: SYSTEM_PROMPT,
-        output_config: { format: { type: 'json_schema', schema: STORY_SCHEMA } },
-        messages: [{ role: 'user', content: 'Create a wrap for this story:\n\n' + storyText }]
-      })
-    });
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, GEN_TIMEOUT_MS);
+    var res;
+    try {
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-8',
+          max_tokens: 16000,
+          thinking: { type: 'adaptive' },
+          system: SYSTEM_PROMPT,
+          output_config: { format: { type: 'json_schema', schema: STORY_SCHEMA } },
+          messages: [{ role: 'user', content: 'Create a wrap for this story:\n\n' + storyText }]
+        })
+      });
+    } catch (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('Timed out after 3 minutes. Try again or shorten the prompt.');
+      throw new Error('Network error — check your connection and try again.');
+    }
+    clearTimeout(timer);
     if (!res.ok) {
       var errBody = null;
       try { errBody = await res.json(); } catch (e) {}
@@ -780,8 +814,11 @@
 
   keyInput.value = getKey();
   document.getElementById('saveKeyBtn').addEventListener('click', function () {
-    localStorage.setItem('anthropic_api_key', keyInput.value.trim());
-    keyDetails.open = false;
+    if (setKey(keyInput.value.trim())) { keyDetails.open = false; }
+    else { showError('This browser is blocking local storage, so the key can’t be saved here.'); }
+  });
+  document.getElementById('clearKeyBtn').addEventListener('click', function () {
+    clearKey(); keyInput.value = '';
   });
 
   function showError(msg) {
