@@ -1,19 +1,34 @@
-# How We Met — a WRAP flip-book reconstruction
+# WRAP — reborn
 
-A single-file, dependency-free reconstruction of **"Storytelling: How We Met"**, an
-example *wrap* from [wrap.co](https://www.wrap.co) — the mobile-first "flip-book"
-messaging format. Everything lives in [`index.html`](index.html): fonts, artwork,
-and the card-flip engine. It works offline, on any phone or desktop browser.
+A revival of [wrap.co](https://www.wrap.co)'s mobile flip-book format, reverse-engineered
+from the original player and rebuilt as dependency-free single-file pages.
 
 **Live site:** https://mjsantone.github.io/wrap/
 
-**Generic player:** https://mjsantone.github.io/wrap/player.html — renders any
-wrap from its JSON. Seven wraps are embedded (How We Met, Timberland Holiday
-Lookbook, QVC, Express Buy – Raiders, Assurance Auto Insurance, Portfolio:
-Designer, Akris Pre-Fall 2015); switch between them with the ≡ Library button
-or a `#w0`–`#w6` URL hash.
+| Page | What it is |
+| --- | --- |
+| [`index.html`](index.html) | **Wrap Composer** — type a story, an LLM (Claude) writes a wrap from the format's primitives, and it renders instantly in the player. Bring-your-own API key (stored in your browser only); "Try a sample" works without one. |
+| [`player.html`](player.html) | **Wrap Library** — a generic player that renders any original wrap from its JSON. Seven reverse-engineered wraps embedded (`#w0`–`#w6`). |
+| [`howwemet.html`](howwemet.html) | **How We Met** — a full-fidelity handcrafted reconstruction of the original example wrap. |
 
-## What a wrap is
+## How generation works
+
+The homepage sends your story to the Anthropic API (`claude-opus-4-8`) directly from
+the browser, with a structured-output JSON schema so the response is guaranteed-valid.
+The model writes a **semantic story schema** — card types like `cover`, `prose`,
+`gallery`, `quote`, `product`, `video`, `map`, each with copy and a color mood — and a
+deterministic compiler in the page maps every card onto the exact layouts
+reverse-engineered from real wraps (the 640 × 910 canvas, headline at y=590, gallery
+text at 555/615/700, and so on). The LLM never emits pixel coordinates, so wraps
+always come out looking designed.
+
+Scaling note: for public use without per-visitor API keys, put a small serverless
+proxy (e.g. a Cloudflare Worker) in front of the Anthropic API and point the page's
+fetch URL at it — the rest of the page is unchanged.
+
+## About the original format
+
+### What a wrap is
 
 A wrap is a phone-sized stack of full-bleed cards you flip through like a small
 book. This one tells an eight-card love story: a cover, a poem, a prologue, three
