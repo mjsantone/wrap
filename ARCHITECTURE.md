@@ -125,10 +125,8 @@ per-IP rate limit (n generations/day) in the Function until accounts exist.
 The repo is already SWA-shaped: static pages at the root, managed API in
 `api/`, `staticwebapp.config.json` for the `/b/{id}` rewrite. To go live:
 
-1. **Cosmos DB** — create a serverless account; database `wrap`, container
-   `wraps` with partition key `/id`. (These infrastructure names
-   predate the BOOK rename and are kept; override with `COSMOS_DATABASE` /
-   `COSMOS_CONTAINER` if you name them differently.)
+1. **Cosmos DB** — create a serverless account; database `book`, container
+   `books` with partition key `/id`.
 2. **Static Web App** — create (Free tier is fine to start), link it to
    this GitHub repo; app location `/`, api location `api`, no build
    command (pages are pre-built and committed). Azure adds its own deploy
