@@ -4,7 +4,11 @@
  *   COSMOS_CONNECTION_STRING            (or COSMOS_ENDPOINT + COSMOS_KEY)
  *   COSMOS_DATABASE   default "wrap"
  *   COSMOS_CONTAINER  default "wraps"   (partition key /id)
- * The client is cached across invocations of a warm Function instance. */
+ * The client is cached across invocations of a warm Function instance.
+ *
+ * The default names deliberately stay 'wrap'/'wraps': they match deployed
+ * infrastructure and are decoupled from the product's BOOK branding.
+ * Override with COSMOS_DATABASE / COSMOS_CONTAINER to rename. */
 
 const { CosmosClient } = require('@azure/cosmos');
 

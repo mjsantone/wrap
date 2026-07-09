@@ -2,7 +2,7 @@
 """Assemble the standalone pages in the repo root from src/.
 
 Each template in src/pages/ is a complete page with `/*@inline <path>*/`
-tokens where a source file (fonts, runtime CSS/JS, compiler, wrap data)
+tokens where a source file (fonts, runtime CSS/JS, compiler, book data)
 gets embedded. The outputs are self-contained single files — no runtime
 fetches — which is what GitHub Pages serves.
 
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent
 PAGES = {
     "src/pages/composer.html": "index.html",
     "src/pages/player.html": "player.html",
-    "src/pages/viewer.html": "w.html",
+    "src/pages/viewer.html": "b.html",
 }
 
 TOKEN = re.compile(r"/\*@inline ([^*]+?)\*/")

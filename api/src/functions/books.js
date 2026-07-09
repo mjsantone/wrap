@@ -8,11 +8,11 @@ function json(status, body) {
   return { status, jsonBody: body };
 }
 
-/* POST /api/wraps  { story: {...} }  →  201 { id }
+/* POST /api/books  { story: {...} }  →  201 { id }
  * Stores a validated story as an unlisted document. Share links are
- * /w/{id}; nothing is listed publicly (the gallery is a later phase). */
-app.http('wraps-create', {
-  route: 'wraps',
+ * /b/{id}; nothing is listed publicly (the gallery is a later phase). */
+app.http('books-create', {
+  route: 'books',
   methods: ['POST'],
   authLevel: 'anonymous',
   handler: async (request, context) => {
@@ -37,23 +37,23 @@ app.http('wraps-create', {
       createdAt: new Date().toISOString(),
     };
     await getContainer().items.create(doc);
-    context.log(`wrap stored id=${doc.id} cards=${result.story.cards.length}`);
+    context.log(`book stored id=${doc.id} cards=${result.story.cards.length}`);
     return json(201, { id: doc.id });
   },
 });
 
-/* GET /api/wraps/{id}  →  200 { id, formatVersion, story, createdAt } */
-app.http('wraps-get', {
-  route: 'wraps/{id}',
+/* GET /api/books/{id}  →  200 { id, formatVersion, story, createdAt } */
+app.http('books-get', {
+  route: 'books/{id}',
   methods: ['GET'],
   authLevel: 'anonymous',
   handler: async (request) => {
     const id = request.params.id || '';
-    if (!ID_PATTERN.test(id)) return json(400, { error: 'malformed wrap id' });
+    if (!ID_PATTERN.test(id)) return json(400, { error: 'malformed book id' });
 
     try {
       const { resource } = await getContainer().item(id, id).read();
-      if (!resource) return json(404, { error: 'wrap not found' });
+      if (!resource) return json(404, { error: 'book not found' });
       return json(200, {
         id: resource.id,
         formatVersion: resource.formatVersion,
@@ -61,7 +61,7 @@ app.http('wraps-get', {
         createdAt: resource.createdAt,
       });
     } catch (err) {
-      if (err && err.code === 404) return json(404, { error: 'wrap not found' });
+      if (err && err.code === 404) return json(404, { error: 'book not found' });
       throw err;
     }
   },

@@ -1,7 +1,7 @@
-/* WrapRuntime — shared renderer + flip engine for all WRAP pages.
+/* BookRuntime — shared renderer + flip engine for all BOOK pages.
  * Single source of truth: consumed by index.html (composer) and player.html (library).
  * Node vocabulary is the union of the two producers:
- *   - reverse-engineered wrap JSON (player): textbox, image(url), box, gallery,
+ *   - reverse-engineered wrap.co JSON (player): textbox, image(url), box, gallery,
  *     button(css content label), action, location, youtube, widget, flow, background, end
  *   - the story compiler (composer): image(hue/lbl), gradation, veil, outline,
  *     textbox, button(label), action, youtube, map, gallery, end
@@ -59,7 +59,7 @@
   }
 
   /* ---------- component renderer ---------- */
-  /* ctx: { wrapName, player } — player provides showCard(i) for the end-card replay. */
+  /* ctx: { bookName, player } — player provides showCard(i) for the end-card replay. */
 
   function render(node, parent, ctx) {
     var t = node.t, el;
@@ -149,7 +149,7 @@
         '<rect x="2" y="2" width="31" height="38" rx="4" stroke="#fff" stroke-width="3"/>' +
         '<path d="M9 12 H26 M9 20 H26 M9 28 H18" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>' +
         '<span>' + escapeHtml(node.n || 'Form') + '</span>';
-      el.title = 'WRAP native form (service offline)';
+      el.title = 'Form (original service offline)';
     }
     else if (t === 'location' || t === 'map') {
       var isMap = t === 'map' || (node.b || []).indexOf('locationMap') !== -1;
@@ -182,8 +182,8 @@
       el = document.createElement('div');
       el.className = 'cmp cmp-end';
       applyCss(el, node.css);
-      el.innerHTML = '<p>' + escapeHtml(ctx.wrapName || '') + '</p>' +
-        '<div class="end-wordmark">WR<b>A</b>P</div>';
+      el.innerHTML = '<p>' + escapeHtml(ctx.bookName || '') + '</p>' +
+        '<div class="end-wordmark">BO<b>O</b>K</div>';
       var rb = document.createElement('button');
       rb.className = 'replay'; rb.type = 'button'; rb.textContent = 'Replay';
       rb.addEventListener('click', function () { if (ctx.player) ctx.player.showCard(0); });
@@ -224,7 +224,7 @@
   /* ---------- player factory: flip mechanics (verbatim from wrap.co main.css) ---------- */
   /* opts: { screen, container, prevBtn, nextBtn, pageBar, tapLeft, tapRight,
    *         keyGate()  -> bool   (should arrow keys act right now)
-   *         onLoaded(wrap)       (page hook: set title, chrome, ...) }        */
+   *         onLoaded(book)       (page hook: set title, chrome, ...) }        */
 
   function createPlayer(opts) {
     var screenEl = opts.screen, container = opts.container;
@@ -257,10 +257,10 @@
       setTimeout(function () { animating = false; }, 420);
     }
 
-    api.loadWrap = function (w) {
+    api.loadBook = function (w) {
       container.innerHTML = '';
       cards = []; current = 0;
-      var ctx = { wrapName: w.name, player: api };
+      var ctx = { bookName: w.name, player: api };
       (w.cards || []).forEach(function (cardNode, i) {
         var card = document.createElement('section');
         card.className = 'card';
@@ -359,7 +359,7 @@
     return api;
   }
 
-  global.WrapRuntime = {
+  global.BookRuntime = {
     render: render,
     createPlayer: createPlayer,
     escapeHtml: escapeHtml,

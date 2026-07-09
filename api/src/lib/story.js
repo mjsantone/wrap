@@ -1,6 +1,6 @@
 'use strict';
 
-/* Story validation for stored wraps.
+/* Story validation for stored books.
  *
  * We persist the *semantic* story JSON (the same shape the composer's
  * STORY_SCHEMA enforces at generation time), not the compiled layout —

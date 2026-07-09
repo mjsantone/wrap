@@ -1,8 +1,8 @@
 {
   "routes": [
     {
-      "route": "/w/*",
-      "rewrite": "/w.html"
+      "route": "/b/*",
+      "rewrite": "/b.html"
     }
   ],
   "platform": {

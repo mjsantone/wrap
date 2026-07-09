@@ -1,4 +1,4 @@
-<title>WRAP — Tell it. Wrap it.</title>
+<title>BOOK — Tell it. Book it.</title>
 
 <style>
 /*@inline src/fonts.css*/
@@ -62,7 +62,7 @@
   }
   .error-box[hidden] { display: none; }
 
-  /* the authentic WRAP loading spinner (from the original player shell) */
+  /* the original wrap.co loading spinner (from the original player shell) */
   .sk-spinner-wave { width: 200px; height: 45px; text-align: center; font-size: 10px; margin: 34px auto 0; }
   .sk-spinner-wave div {
     background-color: rgba(112,174,67,.9); height: 30px; width: 17px; display: inline-block;
@@ -105,14 +105,14 @@
 
 <!-- ================= Homepage ================= -->
 <div class="home" id="homeView">
-  <h1 class="wordmark">WR<b>A</b>P</h1>
-  <p class="tagline">Tell it. Wrap it. A phone-sized flip-book, written by AI.</p>
+  <h1 class="wordmark">BO<b>O</b>K</h1>
+  <p class="tagline">Tell it. Book it. A phone-sized flip-book, written by AI.</p>
 
   <div class="prompt-box">
     <textarea id="storyInput" maxlength="2000"
       placeholder="Tell a story… e.g. “How my grandparents met in Lisbon in 1962” or “Launch story for my sourdough bakery, with a menu and our address on Main St.”"></textarea>
     <div class="actions">
-      <button class="btn btn-primary" id="generateBtn">Wrap it</button>
+      <button class="btn btn-primary" id="generateBtn">Book it</button>
       <button class="btn btn-ghost" id="sampleBtn">Try a sample</button>
     </div>
   </div>
@@ -122,7 +122,7 @@
       <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
       <div class="sk-rect4"></div><div class="sk-rect5"></div>
     </div>
-    <div class="loading-note" id="loadingNote">Writing your wrap…</div>
+    <div class="loading-note" id="loadingNote">Writing your book…</div>
   </div>
 
   <div class="error-box" id="errorBox" hidden></div>
@@ -143,7 +143,7 @@
 
   <div class="footer-links">
     <a href="howwemet.html">How We Met</a> ·
-    <a href="player.html">Wrap Library</a>
+    <a href="player.html">Book Library</a>
   </div>
 </div>
 
@@ -183,7 +183,7 @@
 
   /* ---------- player (shared engine) ---------- */
   var playerStage = document.getElementById('playerStage');
-  var player = WrapRuntime.createPlayer({
+  var player = BookRuntime.createPlayer({
     screen: document.getElementById('screen'),
     container: document.getElementById('cardContainer'),
     prevBtn: document.getElementById('prevBtn'),
@@ -192,7 +192,7 @@
     tapLeft: document.getElementById('tapLeft'),
     tapRight: document.getElementById('tapRight'),
     keyGate: function () { return !playerStage.hidden; },
-    onLoaded: function (w) { document.title = w.name + ' — WRAP'; }
+    onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
 
   /* ---------- generation: browser call to the Anthropic API ---------- */
@@ -230,9 +230,9 @@
           model: 'claude-opus-4-8',
           max_tokens: 16000,
           thinking: { type: 'adaptive' },
-          system: WrapCompiler.SYSTEM_PROMPT,
-          output_config: { format: { type: 'json_schema', schema: WrapCompiler.STORY_SCHEMA } },
-          messages: [{ role: 'user', content: 'Create a wrap for this story:\n\n' + storyText }]
+          system: BookCompiler.SYSTEM_PROMPT,
+          output_config: { format: { type: 'json_schema', schema: BookCompiler.STORY_SCHEMA } },
+          messages: [{ role: 'user', content: 'Create a book for this story:\n\n' + storyText }]
         })
       });
     } catch (e) {
@@ -286,14 +286,14 @@
   }
   function showPlayer(story) {
     try {
-      var wrap = WrapCompiler.compileWrap(story);
-      if (wrap.cards.length < 2) throw new Error('Empty wrap');
+      var book = BookCompiler.compileBook(story);
+      if (book.cards.length < 2) throw new Error('Empty book');
       homeView.classList.add('hidden');
       playerStage.hidden = false;
       lastStory = story;
-      player.loadWrap(wrap);
+      player.loadBook(book);
     } catch (e) {
-      showError('Could not render the generated wrap: ' + e.message);
+      showError('Could not render the generated book: ' + e.message);
     }
   }
   function showHome() {
@@ -326,7 +326,7 @@
     shareBtn.disabled = true;
     shareBtn.textContent = 'Sharing…';
     try {
-      var res = await fetch('/api/wraps', {
+      var res = await fetch('/api/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ story: lastStory })
@@ -337,14 +337,14 @@
         throw new Error((err && err.error) || ('HTTP ' + res.status));
       }
       var data = await res.json();
-      var link = location.origin + '/w/' + data.id;
+      var link = location.origin + '/b/' + data.id;
       var copied = false;
       try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
-      toast((copied ? 'Link copied — ' : 'Your wrap link: ') +
+      toast((copied ? 'Link copied — ' : 'Your book link: ') +
         '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>', true);
     } catch (e) {
       toast('Sharing isn’t available here' +
-        (e && e.message ? ' (' + WrapRuntime.escapeHtml(e.message) + ')' : '') +
+        (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') +
         ' — it needs the hosted API. See ARCHITECTURE.md.');
     } finally {
       shareBtn.disabled = false;
@@ -386,7 +386,7 @@
 
   sampleBtn.addEventListener('click', function () {
     errorBox.hidden = true;
-    showPlayer(WrapCompiler.SAMPLE);
+    showPlayer(BookCompiler.SAMPLE);
   });
 })();
 </script>
