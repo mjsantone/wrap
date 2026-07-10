@@ -1,7 +1,7 @@
 'use strict';
 
 const { app } = require('@azure/functions');
-const { generateStory, MAX_STORY_CHARS } = require('../lib/claude');
+const { generateStory, foundryResource, MAX_STORY_CHARS } = require('../lib/claude');
 
 function json(status, body) {
   return { status, jsonBody: body };
@@ -88,7 +88,16 @@ app.http('generate', {
         /connection error/i.test(err.message || '') ||
         err.code === 'ENOTFOUND' || (err.cause && err.cause.code === 'ENOTFOUND')
       ) {
-        msg = 'Couldn’t reach the model endpoint — check the ANTHROPIC_FOUNDRY_RESOURCE app setting (it should be just the first label of your Foundry endpoint hostname).';
+        /* Echo the hostname we actually tried so a wrong setting is visible
+         * from the page. Masked past 24 chars: if a key was pasted into the
+         * resource field by mistake, it must not print to visitors. */
+        let tried = '';
+        if (process.env.ANTHROPIC_FOUNDRY_RESOURCE) {
+          let name = foundryResource(process.env.ANTHROPIC_FOUNDRY_RESOURCE);
+          if (name.length > 24) name = name.slice(0, 8) + '…(' + name.length + ' chars)';
+          tried = ' (tried https://' + name + '.services.ai.azure.com)';
+        }
+        msg = 'Couldn’t reach the model endpoint' + tried + ' — the ANTHROPIC_FOUNDRY_RESOURCE app setting should be just the first label of your Foundry endpoint hostname.';
       }
       return json(502, { error: msg, detail: String(err.message || '').slice(0, 300) });
     }
