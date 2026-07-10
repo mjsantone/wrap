@@ -2,6 +2,7 @@
 
 const { app } = require('@azure/functions');
 const { generateStory, foundryResource, MAX_STORY_CHARS } = require('../lib/claude');
+const { validateStory } = require('../lib/story');
 
 function json(status, body) {
   return { status, jsonBody: body };
@@ -52,14 +53,25 @@ app.http('generate', {
 
     try {
       const story = await generateStory(text);
-      context.log(`book generated cards=${(story.cards || []).length}`);
-      return json(200, { story });
+      /* Same validation stored books get. With structured outputs the
+       * schema already guarantees this; on the prompt-enforced fallback
+       * (deployments that reject structured outputs) it's the guarantee. */
+      const v = validateStory(story);
+      if (!v.ok) {
+        context.error(`generated story failed validation: ${v.error}`);
+        return json(502, { error: 'The model returned an unusable story — try again.' });
+      }
+      context.log(`book generated cards=${v.story.cards.length}`);
+      return json(200, { story: v.story });
     } catch (err) {
       if (err.code === 'NOT_CONFIGURED') {
         return json(503, { error: 'NOT_CONFIGURED' });
       }
       if (err.code === 'REFUSAL' || err.code === 'TOO_LONG') {
         return json(422, { error: err.message });
+      }
+      if (err.code === 'MALFORMED') {
+        return json(502, { error: err.message });
       }
       if (err.name === 'APIConnectionTimeoutError' || err.status === 408) {
         return json(504, { error: 'Generation took too long — try a shorter or simpler story.' });
