@@ -42,6 +42,15 @@ body { margin: 0; background: #000; }
   aspect-ratio: 640 / 910;
   background: #000; overflow: hidden;
   touch-action: pan-y;
+  /* swiping must never select card text */
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Modern phones are much taller than the 640×910 design canvas — fill the
+ * whole screen and let the card background absorb the extra height; the
+ * runtime centers the canvas vertically (rescale in runtime.js). */
+@media (max-aspect-ratio: 640/910) {
+  .screen { width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; }
 }
 
 /* ---- WRAP card mechanics (values from wrap.co/wraps/main.css) ---- */
@@ -477,8 +486,12 @@ body { margin: 0; background: #000; }
 
     function rescale() {
       var s = screenEl.clientWidth / 640;
+      /* screens taller than the design canvas (modern phones) get the
+       * canvas centered; the card background fills the rest */
+      var top = Math.max(0, (screenEl.clientHeight - 910 * s) / 2);
       Array.prototype.forEach.call(screenEl.querySelectorAll('.canvas'), function (cv) {
         cv.style.transform = 'scale(' + s + ')';
+        cv.style.top = top + 'px';
       });
     }
     if (window.ResizeObserver) new ResizeObserver(rescale).observe(screenEl);
@@ -653,6 +666,13 @@ body { margin: 0; background: #000; }
   }
   var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: '910px' };
 
+  /* Card background for full-bleed image cards: a deep tone of the image's
+   * primary hue, so the screen-fill area on tall phones blends with the
+   * image instead of showing white bars. */
+  function inkBg(image) {
+    return 'hsl(' + num(image && image.h1, 220) + ', 30%, 10%)';
+  }
+
   /* Layout constants below (30px cover inset, headline at y=590, gallery text at
    * 555/615/700, ...) are the geometry reverse-engineered from real wrap.co examples. */
   function compileCard(c) {
@@ -678,7 +698,7 @@ body { margin: 0; background: #000; }
       if (title) k.push(tb(escapeHtml(title), center(120, fitFont(title, 64, 14), MONT)));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
         center(qtop, lines.length > 10 ? 26 : 30, SLAB, { left: 80, width: 480, lh: 1.5 })));
-      return { bg: '#fff', k: k };
+      return { bg: inkBg(c.image), k: k };
     }
     if (t === 'prose') {
       k.push(img(FULL, c.image));
@@ -687,7 +707,7 @@ body { margin: 0; background: #000; }
       if (kicker) k.push(tb(escapeHtml(kicker), center(150, fitFont(kicker, 34, 26), SLAB)));
       k.push(tb(escapeHtml(title), center(kicker ? 215 : 170, fitFont(title, 60, 16), MONT, { left: 30, width: 580, lh: 1.05 })));
       k.push(tb(escapeHtml(body), center(kicker ? 360 : 320, body.length > 330 ? 26 : 30, SLAB, { left: 60, width: 520, lh: 1.45 })));
-      return { bg: '#fff', k: k };
+      return { bg: inkBg(c.image), k: k };
     }
     if (t === 'gallery') {
       var items = (c.items || []).slice(0, 5).map(function (it) {
@@ -717,7 +737,7 @@ body { margin: 0; background: #000; }
         }});
         k.push({ t: 'action', url: c.url || '', css: { position: 'absolute', top: '796px', left: '97px', width: '446px', height: '76px' } });
       }
-      return { bg: '#fff', k: k };
+      return { bg: inkBg(c.image), k: k };
     }
     if (t === 'video') {
       k.push(img(FULL, c.image));
@@ -725,7 +745,7 @@ body { margin: 0; background: #000; }
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: '355px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       if (title) k.push(tb(escapeHtml(title), center(560, fitFont(title, 50, 18), MONT, { left: 30, width: 580 })));
       if (body) k.push(tb(escapeHtml(body), center(650, 26, SLAB, { left: 60, width: 520, lh: 1.35 })));
-      return { bg: '#fff', k: k };
+      return { bg: inkBg(c.image), k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });

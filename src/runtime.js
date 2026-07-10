@@ -234,8 +234,12 @@
 
     function rescale() {
       var s = screenEl.clientWidth / 640;
+      /* screens taller than the design canvas (modern phones) get the
+       * canvas centered; the card background fills the rest */
+      var top = Math.max(0, (screenEl.clientHeight - 910 * s) / 2);
       Array.prototype.forEach.call(screenEl.querySelectorAll('.canvas'), function (cv) {
         cv.style.transform = 'scale(' + s + ')';
+        cv.style.top = top + 'px';
       });
     }
     if (window.ResizeObserver) new ResizeObserver(rescale).observe(screenEl);

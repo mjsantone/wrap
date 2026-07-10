@@ -19,6 +19,15 @@ body { margin: 0; background: #000; }
   aspect-ratio: 640 / 910;
   background: #000; overflow: hidden;
   touch-action: pan-y;
+  /* swiping must never select card text */
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Modern phones are much taller than the 640×910 design canvas — fill the
+ * whole screen and let the card background absorb the extra height; the
+ * runtime centers the canvas vertically (rescale in runtime.js). */
+@media (max-aspect-ratio: 640/910) {
+  .screen { width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; }
 }
 
 /* ---- WRAP card mechanics (values from wrap.co/wraps/main.css) ---- */
