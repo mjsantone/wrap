@@ -183,7 +183,7 @@
       el.className = 'cmp cmp-end';
       applyCss(el, node.css);
       el.innerHTML = '<p>' + escapeHtml(ctx.bookName || '') + '</p>' +
-        '<div class="end-wordmark">BO<b>O</b>K</div>';
+        '<div class="end-wordmark">BOOK<b>.</b></div>';
       var rb = document.createElement('button');
       rb.className = 'replay'; rb.type = 'button'; rb.textContent = 'Replay';
       rb.addEventListener('click', function () { if (ctx.player) ctx.player.showCard(0); });

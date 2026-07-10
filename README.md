@@ -125,7 +125,7 @@ python3 build.py --check  # what CI runs: fails if outputs are stale
 | `src/runtime.js` | `BookRuntime` — the shared renderer (all component types) and flip engine |
 | `src/compile.js` | `BookCompiler` — story JSON schema, system prompt, and the semantic→layout compiler |
 | `src/runtime.css` | Player stage, card mechanics, and component styles |
-| `src/fonts.css` | The three families as data-URI woff2 |
+| `src/fonts.css` | All families as data-URI woff2 — Fraunces (brand), Montserrat, Josefin Slab, Open Sans |
 | `src/data/books-data.js` | The embedded library examples |
 | `src/pages/*.html` | Per-page templates (chrome + wiring); `/*@inline path*/` tokens mark where sources are embedded |
 | `api/` | Azure Functions API (persistence + share links) — `node --test` in `api/` runs its unit tests |
