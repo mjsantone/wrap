@@ -3,6 +3,10 @@
     {
       "route": "/b/*",
       "rewrite": "/b.html"
+    },
+    {
+      "route": "/gallery",
+      "rewrite": "/gallery.html"
     }
   ],
   "platform": {

@@ -201,8 +201,18 @@ preferred.
    before the platform severs the connection; if p95 latency crowds
    the cap, the options are lower effort, bring-your-own Functions
    instead of managed, or a queue-and-poll pattern).
-4. **Gallery** — publish flow, Content Safety gate, `/api/gallery` feed,
-   live mini-render thumbnails.
+4. **✅ Gallery** — `POST /api/books/{id}/publish` promotes an unlisted
+   book into the feed (idempotent; runs the Content Safety gate when
+   configured and refuses to publish if the moderation service errors —
+   never fails open). `GET /api/gallery` serves published stories newest
+   first with offset paging. `/gallery` is an editorial shelf of live
+   mini-render cover thumbnails — the same runtime that plays books,
+   scaled down; no screenshot service exists. The composer's share toast
+   gains an "Add to gallery" action. Moderation setup: create an Azure
+   AI Content Safety resource and set `CONTENT_SAFETY_ENDPOINT` +
+   `CONTENT_SAFETY_KEY` (threshold via `CONTENT_SAFETY_MAX_SEVERITY`,
+   default 2); without it, publishing still works and documents record
+   `moderated: false`.
 5. **Images + search** — Durable fan-out to gpt-image-1, progressive
    placeholder upgrade, web search grounding for business/place stories.
 6. **Accounts + tiers (parked)** — APIM subscriptions; revisit the key/auth

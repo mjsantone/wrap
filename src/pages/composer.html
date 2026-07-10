@@ -129,6 +129,14 @@
   }
   .share-toast[hidden] { display: none; }
   .share-toast a { color: var(--accent); text-decoration: none; }
+  .share-toast button {
+    margin-left: 10px; cursor: pointer;
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    background: var(--accent); color: var(--ink); border: none; border-radius: 2px;
+    padding: 7px 12px;
+  }
+  .share-toast button:disabled { opacity: 0.5; cursor: default; }
 </style>
 
 <!-- ================= Homepage ================= -->
@@ -137,6 +145,7 @@
     <header class="masthead">
       <p class="wordmark">BOOK<b>.</b></p>
       <nav>
+        <a href="gallery.html">Gallery</a>
         <a href="player.html">Library</a>
         <a href="howwemet.html">How&nbsp;We&nbsp;Met</a>
       </nav>
@@ -184,7 +193,7 @@
 
     <footer class="footer">
       <span>Set in Fraunces · A revival of the wrap.co flip-book</span>
-      <span><a href="player.html">Library</a> &nbsp;·&nbsp; <a href="howwemet.html">How We Met</a></span>
+      <span><a href="gallery.html">Gallery</a> &nbsp;·&nbsp; <a href="player.html">Library</a> &nbsp;·&nbsp; <a href="howwemet.html">How We Met</a></span>
     </footer>
   </div>
 </div>
@@ -386,6 +395,25 @@
     if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
   }
 
+  var lastShareId = null;
+
+  /* Publish the shared book into the public gallery feed. */
+  shareToast.addEventListener('click', async function (e) {
+    var btn = e.target.closest('#galleryBtn');
+    if (!btn || !lastShareId) return;
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+    try {
+      var res = await fetch('/api/books/' + encodeURIComponent(lastShareId) + '/publish', { method: 'POST' });
+      var data = null;
+      try { data = await res.json(); } catch (err) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      toast('In the gallery — <a href="gallery.html">see it →</a>', true);
+    } catch (err) {
+      toast('Couldn’t add it to the gallery' + (err && err.message ? ': ' + BookRuntime.escapeHtml(err.message) : ''));
+    }
+  });
+
   shareBtn.addEventListener('click', async function () {
     if (!lastStory) return;
     shareBtn.disabled = true;
@@ -402,11 +430,13 @@
         throw new Error((err && err.error) || ('HTTP ' + res.status));
       }
       var data = await res.json();
+      lastShareId = data.id;
       var link = location.origin + '/b/' + data.id;
       var copied = false;
       try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
       toast((copied ? 'Link copied — ' : 'Your book link: ') +
-        '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>', true);
+        '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
+        '<button type="button" id="galleryBtn">Add to gallery</button>', true);
     } catch (e) {
       toast('Sharing isn’t available here' +
         (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') +

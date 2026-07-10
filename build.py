@@ -21,6 +21,7 @@ PAGES = {
     "src/pages/composer.html": "index.html",
     "src/pages/player.html": "player.html",
     "src/pages/viewer.html": "b.html",
+    "src/pages/gallery.html": "gallery.html",
 }
 
 TOKEN = re.compile(r"/\*@inline ([^*]+?)\*/")
