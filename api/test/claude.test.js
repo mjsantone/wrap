@@ -80,3 +80,12 @@ test('contract files are well-formed', () => {
   assert.match(SYSTEM_PROMPT, /story designer for BOOK/);
   assert.match(SYSTEM_PROMPT, /exactly one cover/);
 });
+
+test('foundryResource normalizes any pasted shape to the resource name', () => {
+  const { foundryResource } = require('../src/lib/claude');
+  assert.equal(foundryResource('myproj'), 'myproj');
+  assert.equal(foundryResource('myproj.services.ai.azure.com'), 'myproj');
+  assert.equal(foundryResource('https://myproj.services.ai.azure.com'), 'myproj');
+  assert.equal(foundryResource('https://myproj.services.ai.azure.com/api/projects/thing'), 'myproj');
+  assert.equal(foundryResource(' https://myproj.cognitiveservices.azure.com/ '), 'myproj');
+});

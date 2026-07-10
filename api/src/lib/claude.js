@@ -22,13 +22,22 @@ const MAX_STORY_CHARS = 2000; // matches the composer textarea's maxlength
 
 let cachedClient = null;
 
+/* The Foundry SDK wants the bare resource *name* — it builds
+ * https://{name}.services.ai.azure.com itself. Accept whatever shape got
+ * pasted from the portal (full endpoint URL, hostname, or the name) and
+ * normalize to the first hostname label; a full URL passed through raw
+ * yields an unresolvable host and an opaque "Connection error." */
+function foundryResource(raw) {
+  return String(raw).trim().replace(/^https?:\/\//i, '').split(/[/.]/)[0];
+}
+
 function getClient() {
   if (cachedClient) return cachedClient;
 
   if (process.env.ANTHROPIC_FOUNDRY_RESOURCE && process.env.ANTHROPIC_FOUNDRY_API_KEY) {
     const AnthropicFoundry = require('@anthropic-ai/foundry-sdk');
     cachedClient = new AnthropicFoundry({
-      resource: process.env.ANTHROPIC_FOUNDRY_RESOURCE,
+      resource: foundryResource(process.env.ANTHROPIC_FOUNDRY_RESOURCE),
       apiKey: process.env.ANTHROPIC_FOUNDRY_API_KEY,
     });
   } else if (process.env.ANTHROPIC_API_KEY) {
@@ -85,4 +94,4 @@ async function generateStory(storyText, client) {
   return JSON.parse(text);
 }
 
-module.exports = { generateStory, getClient, setClient, MAX_STORY_CHARS, STORY_SCHEMA, SYSTEM_PROMPT };
+module.exports = { generateStory, getClient, setClient, foundryResource, MAX_STORY_CHARS, STORY_SCHEMA, SYSTEM_PROMPT };

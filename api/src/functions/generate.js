@@ -81,7 +81,13 @@ app.http('generate', {
         msg = 'The model rejected the request (HTTP 400). On Foundry this usually means the deployment is the “Hosted on Azure” model version, which doesn’t support structured outputs — redeploy the “Hosted on Anthropic” version.';
       } else if (upstream) {
         msg = 'The model returned HTTP ' + upstream + ' — try again.';
-      } else if (err.name === 'APIConnectionError' || err.code === 'ENOTFOUND' || (err.cause && err.cause.code === 'ENOTFOUND')) {
+      } else if (
+        /* the SDK's APIConnectionError keeps name === "Error"; the class
+         * only shows on the constructor */
+        (err.constructor && err.constructor.name === 'APIConnectionError') ||
+        /connection error/i.test(err.message || '') ||
+        err.code === 'ENOTFOUND' || (err.cause && err.cause.code === 'ENOTFOUND')
+      ) {
         msg = 'Couldn’t reach the model endpoint — check the ANTHROPIC_FOUNDRY_RESOURCE app setting (it should be just the first label of your Foundry endpoint hostname).';
       }
       return json(502, { error: msg, detail: String(err.message || '').slice(0, 300) });
