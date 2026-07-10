@@ -33,6 +33,11 @@
     aspect-ratio: 640 / 910;
     background: #000; overflow: hidden;
     touch-action: pan-y;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (max-aspect-ratio: 640/910) {
+    .screen { width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; }
   }
 
   /* ---- card container (verbatim values from main.css) ---- */
@@ -654,8 +659,10 @@
 
     function rescale() {
       var s = screenEl.clientWidth / 640;
+      var top = Math.max(0, (screenEl.clientHeight - 910 * s) / 2);
       Array.prototype.forEach.call(screenEl.querySelectorAll('.canvas'), function (cv) {
         cv.style.transform = 'scale(' + s + ')';
+        cv.style.top = top + 'px';
       });
     }
     rescale();
