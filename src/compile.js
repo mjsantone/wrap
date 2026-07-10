@@ -15,9 +15,15 @@
     return Math.max(30, Math.round(base * perChar / len));
   }
   function num(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : ((n % 360) + 360) % 360; }
-  function img(css, image) {
+  /* slot is the image's address in the story ("3" = card 3, "2.1" =
+   * gallery card 2 item 1) — how the API's image fan-out targets it.
+   * image.url is set server-side once a photograph is generated. */
+  function img(css, image, slot) {
     image = image || {};
-    return { t: 'image', css: css, hue: [num(image.h1, 220), num(image.h2, 260)], lbl: image.label || '' };
+    return {
+      t: 'image', css: css, hue: [num(image.h1, 220), num(image.h2, 260)],
+      lbl: image.label || '', url: image.url || '', slot: slot
+    };
   }
   function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
 
@@ -52,9 +58,10 @@
    *   mid(y)  — the element group stays optically centered
    *   bot(y)  — fixed distance from the bottom edge (y as designed at 910)
    */
-  function compileCard(c, H) {
+  function compileCard(c, H, idx) {
     var k = [];
     var t = c.type;
+    var slot = String(idx);
     var title = c.title || '', body = c.body || '', kicker = c.kicker || '';
     var midShift = Math.round((H - 910) / 2);
     var botShift = H - 910;
@@ -63,7 +70,7 @@
     var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
 
     if (t === 'cover') {
-      k.push(img({ position: 'absolute', top: '30px', left: '30px', width: '580px', height: (H - 55) + 'px' }, c.image));
+      k.push(img({ position: 'absolute', top: '30px', left: '30px', width: '580px', height: (H - 55) + 'px' }, c.image, slot));
       k.push({ t: 'gradation', css: { position: 'absolute', top: '61px', left: '31px', width: '579px', height: (H - 87) + 'px' } });
       var tsize = fitFont(title, 80, 12);
       k.push(tb(escapeHtml(title), center(bot(590) + (80 - tsize), tsize, MONT, { left: 31, width: 580, lh: 1.02 })));
@@ -71,7 +78,7 @@
       return { bg: '#fff', k: k };
     }
     if (t === 'quote') {
-      k.push(img(FULL, c.image));
+      k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'outline', css: FULL });
       var lines = (c.lines || []).map(escapeHtml);
@@ -83,7 +90,7 @@
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'prose') {
-      k.push(img(FULL, c.image));
+      k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'gradation', css: FULL });
       if (kicker) k.push(tb(escapeHtml(kicker), center(mid(150), fitFont(kicker, 34, 26), SLAB)));
@@ -92,9 +99,9 @@
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'gallery') {
-      var items = (c.items || []).slice(0, 5).map(function (it) {
+      var items = (c.items || []).slice(0, 5).map(function (it, j) {
         var ik = [];
-        ik.push(img({ position: 'absolute', top: '10px', left: '10px', width: '620px', height: (H - 20) + 'px' }, it.image));
+        ik.push(img({ position: 'absolute', top: '10px', left: '10px', width: '620px', height: (H - 20) + 'px' }, it.image, slot + '.' + j));
         ik.push({ t: 'gradation', css: { position: 'absolute', top: '19px', left: '12px', width: '616px', height: (H - 34) + 'px' } });
         if (it.kicker) ik.push(tb(escapeHtml(it.kicker), center(bot(555), fitFont(it.kicker, 38, 26), SLAB, { left: 30, width: 580 })));
         var isize = fitFont(it.title || '', 60, 15);
@@ -105,7 +112,7 @@
       return { bg: '#fff', k: [{ t: 'gallery', k: items }] };
     }
     if (t === 'product') {
-      k.push(img(FULL, c.image));
+      k.push(img(FULL, c.image, slot));
       k.push({ t: 'gradation', css: FULL });
       if (kicker) k.push(tb(escapeHtml(kicker), center(bot(540), fitFont(kicker, 34, 26), SLAB)));
       k.push(tb(escapeHtml(title), center(bot(600), fitFont(title, 50, 18), MONT, { left: 30, width: 580 })));
@@ -122,7 +129,7 @@
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'video') {
-      k.push(img(FULL, c.image));
+      k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       if (title) k.push(tb(escapeHtml(title), center(bot(560), fitFont(title, 50, 18), MONT, { left: 30, width: 580 })));
@@ -143,8 +150,8 @@
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
     var out = { name: story.name || 'Untitled', height: H, cards: [] };
-    (story.cards || []).forEach(function (c) {
-      var compiled = compileCard(c || {}, H);
+    (story.cards || []).forEach(function (c, i) {
+      var compiled = compileCard(c || {}, H, i);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended

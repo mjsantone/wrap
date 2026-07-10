@@ -395,6 +395,52 @@
 
   var lastShareId = null;
 
+  /* ---------- images: client-driven fan-out ----------
+   * After a share, request one photograph per image slot; each lands on
+   * the stored book server-side and fades in over its duotone placeholder
+   * here (render() tags slot elements with data-slot). Sequential on
+   * purpose: one image per call stays under the API's response cap, and
+   * a provider that isn't configured stops the whole run on the first
+   * 503 — placeholders simply remain. */
+  function applyImageUrl(story, key, url) {
+    var m = /^(\d+)(?:\.(\d+))?$/.exec(key || '');
+    if (!m || !story) return;
+    var card = (story.cards || [])[+m[1]];
+    if (!card) return;
+    var target = m[2] == null ? card : (card.items || [])[+m[2]];
+    if (target && target.image) target.image.url = url;
+  }
+
+  function setImageNote(text) {
+    var note = document.getElementById('imgNote');
+    if (note) { if (text) note.textContent = text; else note.remove(); }
+  }
+
+  async function fanOutImages(id, slots) {
+    for (var i = 0; i < (slots || []).length; i++) {
+      if (lastShareId !== id) return; // a newer share took over
+      var res;
+      try {
+        res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot: slots[i] })
+        });
+      } catch (e) { setImageNote(null); return; }
+      if (res.status === 503 || res.status === 429) { setImageNote(null); return; }
+      if (!res.ok) continue; // one bad slot shouldn't stop the rest
+      var d = null;
+      try { d = await res.json(); } catch (e) { continue; }
+      if (!d || !d.url) continue;
+      applyImageUrl(lastStory, d.slot, d.url);
+      Array.prototype.forEach.call(
+        document.querySelectorAll('[data-slot="' + d.slot + '"]'),
+        function (el) { BookRuntime.attachImage(el, d.url); }
+      );
+    }
+    setImageNote('The pictures are in.');
+  }
+
   /* Publish the shared book into the public gallery feed. */
   shareToast.addEventListener('click', async function (e) {
     var btn = e.target.closest('#galleryBtn');
@@ -432,9 +478,13 @@
       var link = location.origin + '/b/' + data.id;
       var copied = false;
       try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
+      var slots = data.imageSlots || [];
       toast((copied ? 'Link copied — ' : 'Your book link: ') +
         '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
-        '<button type="button" id="galleryBtn">Add to the library</button>', true);
+        '<button type="button" id="galleryBtn">Add to the library</button>' +
+        (slots.length ? '<br><span id="imgNote">Painting the pictures — they’ll fade in as they finish.</span>' : ''),
+        true);
+      if (slots.length) fanOutImages(data.id, slots);
     } catch (e) {
       toast('Sharing isn’t available here' +
         (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') +

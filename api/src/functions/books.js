@@ -3,6 +3,7 @@
 const { app } = require('@azure/functions');
 const { validateStory, newId, ID_PATTERN, MAX_BODY_BYTES } = require('../lib/story');
 const { getContainer } = require('../lib/cosmos');
+const { listImageSlots } = require('../lib/images');
 const moderation = require('../lib/moderation');
 
 function json(status, body) {
@@ -39,7 +40,9 @@ app.http('books-create', {
     };
     await getContainer().items.create(doc);
     context.log(`book stored id=${doc.id} cards=${result.story.cards.length}`);
-    return json(201, { id: doc.id });
+    /* imageSlots: which slots the composer may fan out image generation
+     * for (POST /api/books/{id}/images) — see lib/images.js */
+    return json(201, { id: doc.id, imageSlots: listImageSlots(result.story).map((s) => s.key) });
   },
 });
 
@@ -54,7 +57,8 @@ app.http('books-get', {
 
     try {
       const { resource } = await getContainer().item(id, id).read();
-      if (!resource) return json(404, { error: 'book not found' });
+      /* kind marks non-book docs (stored images) sharing the container */
+      if (!resource || resource.kind) return json(404, { error: 'book not found' });
       return json(200, {
         id: resource.id,
         formatVersion: resource.formatVersion,
@@ -87,7 +91,7 @@ app.http('books-publish', {
       if (err && err.code === 404) return json(404, { error: 'book not found' });
       throw err;
     }
-    if (!resource) return json(404, { error: 'book not found' });
+    if (!resource || resource.kind) return json(404, { error: 'book not found' });
     if (resource.visibility === 'published') {
       return json(200, { id, visibility: 'published' });
     }

@@ -43,6 +43,20 @@ Sharing stores the story in Cosmos DB behind `/b/{id}` links; **Add to the
 library** publishes it to the public shelf (with an Azure AI Content Safety
 gate when configured).
 
+## The pictures
+
+Every card carries an image *slot* — a scene label plus duotone hues — and
+books render instantly with those gradient placeholders. On the hosted
+deployment, sharing a book also generates real photographs: after Share, the
+composer requests one image per slot (`POST /api/books/{id}/images`),
+`gpt-image-1` paints a 1024×1536 portrait, and each picture fades in over its
+placeholder as it lands — on the shared page, in the library thumbnails, and
+in the composer preview. The provider is picked by environment:
+`AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_KEY` (+
+`AZURE_OPENAI_IMAGE_DEPLOYMENT`) for Azure OpenAI, else `OPENAI_API_KEY` for
+the OpenAI API directly. With neither set, books simply keep their duotone
+placeholders.
+
 ## Controls
 
 | Input | Action |
