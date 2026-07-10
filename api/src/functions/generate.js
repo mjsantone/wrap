@@ -68,7 +68,23 @@ app.http('generate', {
         return json(429, { error: 'The model is busy — try again in a minute.' });
       }
       context.error('generation failed', err);
-      return json(502, { error: 'Generation failed — try again.' });
+      /* Say *which* upstream failure this was — SWA managed functions have
+       * no easily reachable logs, so the response is the debugging surface.
+       * Each hint names the app setting to check. */
+      const upstream = Number(err.status) || 0;
+      let msg = 'Generation failed — try again.';
+      if (upstream === 401 || upstream === 403) {
+        msg = 'The model rejected our credentials — check the ANTHROPIC_FOUNDRY_API_KEY / ANTHROPIC_API_KEY app setting.';
+      } else if (upstream === 404) {
+        msg = 'The model deployment wasn’t found — the GENERATION_MODEL app setting (default claude-opus-4-8) must match your Foundry deployment name.';
+      } else if (upstream === 400) {
+        msg = 'The model rejected the request (HTTP 400). On Foundry this usually means the deployment is the “Hosted on Azure” model version, which doesn’t support structured outputs — redeploy the “Hosted on Anthropic” version.';
+      } else if (upstream) {
+        msg = 'The model returned HTTP ' + upstream + ' — try again.';
+      } else if (err.name === 'APIConnectionError' || err.code === 'ENOTFOUND' || (err.cause && err.cause.code === 'ENOTFOUND')) {
+        msg = 'Couldn’t reach the model endpoint — check the ANTHROPIC_FOUNDRY_RESOURCE app setting (it should be just the first label of your Foundry endpoint hostname).';
+      }
+      return json(502, { error: msg, detail: String(err.message || '').slice(0, 300) });
     }
   },
 });
