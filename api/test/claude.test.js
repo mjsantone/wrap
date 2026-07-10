@@ -74,6 +74,73 @@ test('throws NOT_CONFIGURED without keys or injected client', async () => {
   }
 });
 
+/* Foundry's "Hosted on Azure" model version rejects structured outputs:
+ * 400 "structured_outputs not supported in your workspace". */
+function schemalessClient(story, calls) {
+  return {
+    messages: {
+      create: async (params) => {
+        calls.push(params);
+        if (params.output_config) {
+          const e = new Error('structured_outputs not supported in your workspace.');
+          e.status = 400;
+          throw e;
+        }
+        return {
+          stop_reason: 'end_turn',
+          content: [{ type: 'text', text: 'Here is the book:\n```json\n' + JSON.stringify(story) + '\n```' }],
+        };
+      },
+    },
+  };
+}
+
+test('falls back to prompt-enforced JSON when structured outputs are unsupported', async () => {
+  const story = { name: 'B', cards: [{ type: 'cover', title: 'B' }] };
+  const calls = [];
+  const client = schemalessClient(story, calls);
+
+  const out = await generateStory('x', client);
+  assert.deepEqual(out, story);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].output_config, undefined);
+  assert.match(calls[1].system, /JSON Schema/);
+
+  // the discovery is remembered — the next generation skips the failing attempt
+  const out2 = await generateStory('y', client);
+  assert.deepEqual(out2, story);
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].output_config, undefined);
+});
+
+test('other 400s are not swallowed by the fallback', async () => {
+  const client = {
+    messages: {
+      create: async () => {
+        const e = new Error('max_tokens: value too large');
+        e.status = 400;
+        throw e;
+      },
+    },
+  };
+  await assert.rejects(generateStory('x', client), /max_tokens/);
+});
+
+test('fallback text without a JSON object maps to MALFORMED', async () => {
+  const calls = [];
+  const client = schemalessClient({}, calls);
+  client.messages.create = async (params) => {
+    calls.push(params);
+    if (params.output_config) {
+      const e = new Error('structured_outputs not supported in your workspace.');
+      e.status = 400;
+      throw e;
+    }
+    return { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Sorry, I cannot help with that.' }] };
+  };
+  await assert.rejects(generateStory('x', client), (e) => e.code === 'MALFORMED');
+});
+
 test('contract files are well-formed', () => {
   assert.equal(STORY_SCHEMA.type, 'object');
   assert.ok(STORY_SCHEMA.properties.cards.items.properties.type.enum.includes('cover'));
