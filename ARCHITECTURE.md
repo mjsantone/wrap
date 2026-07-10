@@ -8,17 +8,16 @@ funded by Azure credits.
 ## Today (phase 1 — this repo)
 
 ```
-GitHub Pages (static)
-├── index.html    Book Composer — story → Claude → semantic JSON → compiler → player
-├── player.html   Book Library — 7 reverse-engineered wrap.co examples
-└── howwemet.html Handcrafted reconstruction (frozen artifact, not built)
+Static pages (GitHub Pages + Azure SWA)
+├── index.html    The Composer — story → Claude → semantic JSON → compiler → player
+├── library.html  The Library — published books as live mini-render thumbnails
+└── b.html        The Viewer — /b/{id} share links
 
 src/                     single source of truth, assembled by build.py
-├── runtime.js           BookRuntime — renderer (15 component types) + flip engine
-├── compile.js           BookCompiler — story schema, system prompt, layout compiler
+├── runtime.js           BookRuntime — renderer + flip engine + adaptive-canvas math
+├── compile.js           BookCompiler — story schema, system prompt, band-anchored layouts
 ├── runtime.css          player stage, card mechanics, component styles
-├── fonts.css            Montserrat / Josefin Slab / Open Sans as data-URI woff2
-├── data/books-data.js   embedded library examples
+├── fonts.css            Fraunces / Montserrat / Josefin Slab / Open Sans as data-URI woff2
 └── pages/               page templates (chrome + wiring only)
 ```
 
@@ -48,7 +47,7 @@ on that contract.
                              │
               ┌──────────────┼──────────────────────┐
               ▼              ▼                      ▼
-   POST /api/generate   GET /api/gallery      GET /api/books/{id}
+   POST /api/generate   GET /api/library      GET /api/books/{id}
               │              │                      │
               ▼              └──────────┬───────────┘
    ┌─────────────────────┐             ▼
@@ -80,7 +79,7 @@ on that contract.
 | Generation | **Azure Function `POST /api/generate`** | Moves the Anthropic call server-side. This ends bring-your-own-key: visitors just type a story. Also the single choke point for rate limits, moderation, and metering. |
 | Model access | **Claude on Microsoft Foundry** (`claude-opus-4-8`) | Bills against Azure credits instead of an Anthropic account card. The Anthropic SDK's `AnthropicFoundry` client keeps the same Messages API surface — the prompt, schema, and compiler contract move over unchanged. Beta status is the top spike risk (see checklist). |
 | Book storage | **Cosmos DB serverless** | Books are small JSON docs read by id plus one feed query — exactly the serverless Cosmos sweet spot. Pay-per-request rounds to ~zero at hundreds of users; no capacity to manage. |
-| Gallery feed | Cosmos + `GET /api/gallery` | The discovery gallery is a rebuild of wrap.co's `/examples/` grid. Thumbnails are live mini-renders of the first card (the runtime scaled down in CSS) — no screenshot service needed. |
+| Library feed | Cosmos + `GET /api/library` | The public shelf. Thumbnails are live mini-renders of the cover card (the runtime scaled down in CSS) — no screenshot service needed. |
 | Images | **Azure OpenAI `gpt-image-1`**, 1024×1536 portrait | The compiler already emits an image *slot* per card (label + duotone hues). Generation fills the slot; the gradient stays as the instant placeholder while images arrive, so books are viewable immediately. |
 | Image fan-out | **Durable Functions** | A book needs 5–10 images; generating them inline would hold the HTTP call open for minutes. The orchestration fans out per-image activities, writes each to Blob as it lands, and the player upgrades placeholders progressively. |
 | Image serving | **Blob Storage + Azure CDN** | Immutable content-addressed blobs, cache-forever headers. |
@@ -201,11 +200,11 @@ preferred.
    before the platform severs the connection; if p95 latency crowds
    the cap, the options are lower effort, bring-your-own Functions
    instead of managed, or a queue-and-poll pattern).
-4. **✅ Gallery** — `POST /api/books/{id}/publish` promotes an unlisted
+4. **✅ Library** (née gallery) — `POST /api/books/{id}/publish` promotes an unlisted
    book into the feed (idempotent; runs the Content Safety gate when
    configured and refuses to publish if the moderation service errors —
-   never fails open). `GET /api/gallery` serves published stories newest
-   first with offset paging. `/gallery` is an editorial shelf of live
+   never fails open). `GET /api/library` serves published stories newest
+   first with offset paging. `/library` is an editorial shelf of live
    mini-render cover thumbnails — the same runtime that plays books,
    scaled down; no screenshot service exists. The composer's share toast
    gains an "Add to gallery" action. Moderation setup: create an Azure
@@ -213,7 +212,17 @@ preferred.
    `CONTENT_SAFETY_KEY` (threshold via `CONTENT_SAFETY_MAX_SEVERITY`,
    default 2); without it, publishing still works and documents record
    `moderated: false`.
-5. **Images + search** — Durable fan-out to gpt-image-1, progressive
-   placeholder upgrade, web search grounding for business/place stories.
+4.5 **✅ Adaptive canvas** — the compiler is height-parameterized
+   (`compileBook(story, {height})`): logical width stays 640, height
+   follows the viewer's screen aspect (clamped 910–1390), and layouts
+   are anchored bands (bottom-anchored covers/products, centered
+   quotes/prose) instead of fixed coordinates. Zero data migration —
+   stored books are semantic stories recompiled at view time. The
+   legacy museum pages (player.html library of wrap.co examples,
+   howwemet.html reconstruction) were retired with it.
+5. **Images + search** — Durable fan-out to gpt-image-1 at 2:3
+   portrait, cover-cropped into the adaptive canvas with safe areas;
+   progressive placeholder upgrade; web search grounding for
+   business/place stories.
 6. **Accounts + tiers (parked)** — APIM subscriptions; revisit the key/auth
    question here.

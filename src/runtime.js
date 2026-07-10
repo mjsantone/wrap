@@ -42,6 +42,13 @@
     return 'linear-gradient(160deg, hsl(' + h1 + ',30%,36%), hsl(' + h2 + ',34%,14%))';
   }
 
+  /* Logical canvas height for the adaptive canvas: follows the viewport
+   * aspect, clamped between the classic 910 and a modern tall phone. */
+  function canvasHeight() {
+    var w = global.innerWidth || 640, h = global.innerHeight || 910;
+    return Math.max(910, Math.min(1390, Math.round(640 * h / w)));
+  }
+
   function hashHue(s) {
     var h = 0;
     for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
@@ -230,13 +237,14 @@
     var screenEl = opts.screen, container = opts.container;
     var prevBtn = opts.prevBtn, nextBtn = opts.nextBtn, pageBar = opts.pageBar;
     var cards = [], total = 0, current = 0, animating = false;
+    var canvasH = 910;
     var api = {};
 
     function rescale() {
       var s = screenEl.clientWidth / 640;
-      /* screens taller than the design canvas (modern phones) get the
-       * canvas centered; the card background fills the rest */
-      var top = Math.max(0, (screenEl.clientHeight - 910 * s) / 2);
+      /* screens taller than the loaded canvas get it centered; the card
+       * background fills the rest */
+      var top = Math.max(0, (screenEl.clientHeight - canvasH * s) / 2);
       Array.prototype.forEach.call(screenEl.querySelectorAll('.canvas'), function (cv) {
         cv.style.transform = 'scale(' + s + ')';
         cv.style.top = top + 'px';
@@ -264,6 +272,9 @@
     api.loadBook = function (w) {
       container.innerHTML = '';
       cards = []; current = 0;
+      canvasH = w.height || 910;
+      /* canvas + gallery-item heights follow the compiled book */
+      screenEl.style.setProperty('--canvas-h', canvasH + 'px');
       var ctx = { bookName: w.name, player: api };
       (w.cards || []).forEach(function (cardNode, i) {
         var card = document.createElement('section');
@@ -366,6 +377,7 @@
   global.BookRuntime = {
     render: render,
     createPlayer: createPlayer,
+    canvasHeight: canvasHeight,
     escapeHtml: escapeHtml,
     safeUrl: safeUrl,
     applyCss: applyCss,

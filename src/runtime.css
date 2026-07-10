@@ -55,7 +55,7 @@ body { margin: 0; background: #000; }
 }
 .card.animate-swipe-hint { animation: 1.9s 2s 1 bounceCardHintAnimation; }
 
-.canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; }
+.canvas { position: absolute; top: 0; left: 0; width: 640px; height: var(--canvas-h, 910px); transform-origin: 0 0; }
 .canvas p { margin: 0 0 0.4em; }
 .canvas p:last-child { margin-bottom: 0; }
 
@@ -125,7 +125,7 @@ body { margin: 0; background: #000; }
 .cmp-gallery { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
   scroll-snap-type: y mandatory; scrollbar-width: none; }
 .cmp-gallery::-webkit-scrollbar { display: none; }
-.cmp-gallery-item { position: relative; width: 640px; height: 910px; scroll-snap-align: start; overflow: hidden; }
+.cmp-gallery-item { position: relative; width: 640px; height: var(--canvas-h, 910px); scroll-snap-align: start; overflow: hidden; }
 .gallery-hint {
   position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
   z-index: 970; color: #fff; opacity: 0.75; pointer-events: none;

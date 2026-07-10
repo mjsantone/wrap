@@ -145,9 +145,7 @@
     <header class="masthead">
       <p class="wordmark">BOOK<b>.</b></p>
       <nav>
-        <a href="gallery.html">Gallery</a>
-        <a href="player.html">Library</a>
-        <a href="howwemet.html">How&nbsp;We&nbsp;Met</a>
+        <a href="library.html">Library</a>
       </nav>
     </header>
 
@@ -193,7 +191,7 @@
 
     <footer class="footer">
       <span>Set in Fraunces · A revival of the wrap.co flip-book</span>
-      <span><a href="gallery.html">Gallery</a> &nbsp;·&nbsp; <a href="player.html">Library</a> &nbsp;·&nbsp; <a href="howwemet.html">How We Met</a></span>
+      <span><a href="library.html">Library</a></span>
     </footer>
   </div>
 </div>
@@ -360,7 +358,7 @@
   }
   function showPlayer(story) {
     try {
-      var book = BookCompiler.compileBook(story);
+      var book = BookCompiler.compileBook(story, { height: BookRuntime.canvasHeight() });
       if (book.cards.length < 2) throw new Error('Empty book');
       homeView.classList.add('hidden');
       playerStage.hidden = false;
@@ -408,9 +406,9 @@
       var data = null;
       try { data = await res.json(); } catch (err) {}
       if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
-      toast('In the gallery — <a href="gallery.html">see it →</a>', true);
+      toast('On the shelf — <a href="library.html">see the library →</a>', true);
     } catch (err) {
-      toast('Couldn’t add it to the gallery' + (err && err.message ? ': ' + BookRuntime.escapeHtml(err.message) : ''));
+      toast('Couldn’t add it to the library' + (err && err.message ? ': ' + BookRuntime.escapeHtml(err.message) : ''));
     }
   });
 
@@ -436,7 +434,7 @@
       try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
       toast((copied ? 'Link copied — ' : 'Your book link: ') +
         '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
-        '<button type="button" id="galleryBtn">Add to gallery</button>', true);
+        '<button type="button" id="galleryBtn">Add to the library</button>', true);
     } catch (e) {
       toast('Sharing isn’t available here' +
         (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') +
