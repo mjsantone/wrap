@@ -7,12 +7,12 @@ function json(status, body) {
   return { status, jsonBody: body };
 }
 
-/* GET /api/gallery?limit=24&offset=0
+/* GET /api/library?limit=24&offset=0
  * → 200 { books: [{ id, story, publishedAt }], hasMore }
  * The feed returns full stories — thumbnails are live mini-renders of the
  * cover card, compiled client-side, so no screenshot service exists. */
-app.http('gallery', {
-  route: 'gallery',
+app.http('library', {
+  route: 'library',
   methods: ['GET'],
   authLevel: 'anonymous',
   handler: async (request) => {

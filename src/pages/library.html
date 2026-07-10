@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>The Gallery — BOOK</title>
+<title>The Library — BOOK</title>
 
 <style>
 /*@inline src/fonts.css*/
@@ -110,13 +110,12 @@
       <p class="wordmark"><a href="./">BOOK<b>.</b></a></p>
       <nav>
         <a href="./">Compose</a>
-        <a href="player.html">Library</a>
       </nav>
     </header>
 
     <section class="hero">
-      <h1>The Gallery<b>.</b></h1>
-      <p class="lede">Books people have told and chosen to share.
+      <h1>The Library<b>.</b></h1>
+      <p class="lede">Books people have told and put on the shelf.
       Tap one to flip through it — or <a href="./" style="color: var(--accent); text-decoration: none;">tell your own</a>.</p>
     </section>
 
@@ -128,11 +127,11 @@
     </div>
     <div class="state-box" id="emptyBox" hidden>
       <p>Nothing on the shelf yet. Generate a book, share it, and be the
-      first to add one to the gallery.</p>
+      first to add one to the library.</p>
       <a href="./">Tell a story →</a>
     </div>
     <div class="state-box" id="errorBox" hidden>
-      <p id="errorMsg">The gallery needs the hosted deployment.</p>
+      <p id="errorMsg">The library needs the hosted deployment.</p>
       <a href="./">Back to the composer →</a>
     </div>
 
@@ -144,7 +143,7 @@
 
     <footer class="footer">
       <span>Set in Fraunces · A revival of the wrap.co flip-book</span>
-      <span><a href="./">Compose</a> &nbsp;·&nbsp; <a href="player.html">Library</a></span>
+      <span><a href="./">Compose</a></span>
     </footer>
   </div>
 </div>
@@ -181,7 +180,7 @@
   /* A tile is a live mini-render of the book's cover card — the same
    * runtime that plays the book, scaled down. No screenshots anywhere. */
   function tile(entry) {
-    var book = BookCompiler.compileBook(entry.story || {});
+    var book = BookCompiler.compileBook(entry.story || {}, { height: 910 });
     if (!book.cards.length) return null;
 
     var a = document.createElement('a');
@@ -227,11 +226,11 @@
     moreBtn.disabled = true;
     var res;
     try {
-      res = await fetch('/api/gallery?limit=' + PAGE + '&offset=' + offset);
+      res = await fetch('/api/library?limit=' + PAGE + '&offset=' + offset);
     } catch (e) {
-      return fail('The gallery lives on the hosted deployment — this copy of the site has no API.');
+      return fail('The library lives on the hosted deployment — this copy of the site has no API.');
     }
-    if (!res.ok) return fail('Couldn’t load the gallery right now (HTTP ' + res.status + '). Try a refresh.');
+    if (!res.ok) return fail('Couldn’t load the library right now (HTTP ' + res.status + '). Try a refresh.');
     var data = await res.json();
 
     loadingBox.hidden = true;

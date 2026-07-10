@@ -5,8 +5,13 @@
       "rewrite": "/b.html"
     },
     {
+      "route": "/library",
+      "rewrite": "/library.html"
+    },
+    {
       "route": "/gallery",
-      "rewrite": "/gallery.html"
+      "redirect": "/library",
+      "statusCode": 301
     }
   ],
   "platform": {
