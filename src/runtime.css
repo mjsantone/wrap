@@ -1,3 +1,4 @@
+:root { --accent: #FF5A36; --ink: #100F12; --paper: #F4F1EA; --muted: #8a8d94; }
 /* WrapRuntime styles — the player stage, card flip mechanics, and every
  * rendered component. Shared by all pages; page chrome lives in each page. */
 
@@ -99,17 +100,17 @@ body { margin: 0; background: #000; }
   background: rgba(0,0,0,0.3) !important;
   transition: background 0.2s;
 }
-.cmp-widget:hover { background: rgba(159,204,58,0.35) !important; }
+.cmp-widget:hover { background: rgba(255,90,54,0.35) !important; }
 .cmp-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .cmp-end p { color: #fff; font-weight: 200; font-size: 26px; margin: 5px 0; font-family: 'Open Sans', sans-serif; max-width: 85%; }
-.cmp-end .end-wordmark { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: 0.14em; color: #fff; margin-top: 6px; }
-.cmp-end .end-wordmark b { color: #9fcc3a; }
+.cmp-end .end-wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 34px; letter-spacing: 0.04em; color: #fff; margin-top: 6px; }
+.cmp-end .end-wordmark b { color: var(--accent); }
 .cmp-end .replay {
   margin-top: 28px; cursor: pointer; font-family: 'Open Sans', sans-serif; font-size: 22px;
   color: #fff; background: #434343; border: none; border-radius: 3px; padding: 12px 40px;
   box-shadow: 0 2px 0 rgba(35,31,32,0.25); transition: all 0.2s ease-in-out;
 }
-.cmp-end .replay:hover { background: #9fcc3a; color: #212121; }
+.cmp-end .replay:hover { background: var(--accent); color: #212121; }
 
 /* ---- galleries ---- */
 .cmp-gallery { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
@@ -128,7 +129,7 @@ body { margin: 0; background: #000; }
 /* ---- player chrome ---- */
 .pagination-track { position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
   background: #000; z-index: 1000; pointer-events: none; overflow: hidden; }
-.pagination-track .current-page { position: absolute; height: 100%; background: #9fcc3a; transition: left 0.12s ease-out; }
+.pagination-track .current-page { position: absolute; height: 100%; background: var(--accent); transition: left 0.12s ease-out; }
 .pv-btn {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 995;
   width: 46px; height: 70px; border: none; background: transparent; cursor: pointer;
@@ -136,7 +137,7 @@ body { margin: 0; background: #000; }
   display: grid; place-items: center; padding: 0;
 }
 .pv-btn:hover, .pv-btn:focus-visible { opacity: 0.9; }
-.pv-btn:focus-visible { outline: 2px solid #9fcc3a; outline-offset: -4px; border-radius: 8px; }
+.pv-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 8px; }
 .pv-btn[hidden] { display: none; }
 .pv-btn.prev { left: 2px; } .pv-btn.next { right: 2px; }
 .pv-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
