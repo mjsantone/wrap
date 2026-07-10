@@ -63,6 +63,12 @@ body { margin: 0; background: #000; }
 .cmp { position: absolute; margin: 0; }
 .cmp-image { overflow: hidden; }
 .img-ph { position: absolute; inset: 0; display: grid; place-items: center; }
+/* generated photograph over its duotone placeholder, fading in on load */
+.img-real {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: 0; transition: opacity 0.6s ease;
+}
+.img-real.loaded { opacity: 1; }
 .img-ph span {
   font-family: 'Montserrat', sans-serif; font-size: 15px; letter-spacing: 0.24em;
   text-transform: uppercase; color: rgba(255,255,255,0.4); text-align: center;

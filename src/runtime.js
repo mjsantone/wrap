@@ -49,6 +49,32 @@
     return Math.max(910, Math.min(1390, Math.round(640 * h / w)));
   }
 
+  /* Real photographs live behind our own /api/images/ ids (or https, for
+   * future CDN serving) — anything else stays a duotone placeholder. */
+  function imageSrc(url) {
+    if (typeof url !== 'string') return null;
+    var u = url.trim();
+    if (/^https:\/\//i.test(u) || /^\/api\/images\//.test(u)) return u;
+    return null;
+  }
+
+  /* Lay a real image over a slot's duotone placeholder; it fades in on
+   * load, so books are viewable the instant the placeholders render.
+   * Called at render time (stored urls) and by the composer's fan-out
+   * as freshly generated images land. */
+  function attachImage(el, url) {
+    var src = imageSrc(url);
+    if (!src || el.querySelector('.img-real')) return;
+    var im = document.createElement('img');
+    im.className = 'img-real';
+    im.alt = '';
+    im.decoding = 'async';
+    im.loading = 'lazy';
+    im.addEventListener('load', function () { im.classList.add('loaded'); });
+    im.src = src;
+    el.appendChild(im);
+  }
+
   function hashHue(s) {
     var h = 0;
     for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
@@ -88,6 +114,9 @@
         tag.textContent = node.lbl || 'image';
         ph.appendChild(tag);
         el.appendChild(ph);
+        /* slot key: how the composer's image fan-out finds this element */
+        if (node.slot != null) el.setAttribute('data-slot', node.slot);
+        attachImage(el, url);
       }
     }
     else if (t === 'gradation' || t === 'veil') {
@@ -380,6 +409,8 @@
     canvasHeight: canvasHeight,
     escapeHtml: escapeHtml,
     safeUrl: safeUrl,
+    imageSrc: imageSrc,
+    attachImage: attachImage,
     applyCss: applyCss,
     grad: grad,
     hashHue: hashHue

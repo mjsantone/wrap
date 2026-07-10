@@ -60,10 +60,10 @@ on that contract.
              │ story JSON              │
              ▼                         │
    ┌─────────────────────┐             │
-   │ Durable Functions   │─────────────┘
-   │ image fan-out       │
-   │ Azure OpenAI        │──▶ Blob Storage + CDN (images)
-   │ gpt-image-1         │
+   │ per-image Function  │─────────────┘
+   │ (client-driven      │
+   │  fan-out)           │──▶ image docs in Cosmos, served via
+   │ gpt-image-1         │    GET /api/images/{id} (Blob+CDN later)
    └─────────────────────┘
 
    Azure AI Content Safety — moderation gate before a book goes public
@@ -80,9 +80,9 @@ on that contract.
 | Model access | **Claude on Microsoft Foundry** (`claude-opus-4-8`) | Bills against Azure credits instead of an Anthropic account card. The Anthropic SDK's `AnthropicFoundry` client keeps the same Messages API surface — the prompt, schema, and compiler contract move over unchanged. Beta status is the top spike risk (see checklist). |
 | Book storage | **Cosmos DB serverless** | Books are small JSON docs read by id plus one feed query — exactly the serverless Cosmos sweet spot. Pay-per-request rounds to ~zero at hundreds of users; no capacity to manage. |
 | Library feed | Cosmos + `GET /api/library` | The public shelf. Thumbnails are live mini-renders of the cover card (the runtime scaled down in CSS) — no screenshot service needed. |
-| Images | **Azure OpenAI `gpt-image-1`**, 1024×1536 portrait | The compiler already emits an image *slot* per card (label + duotone hues). Generation fills the slot; the gradient stays as the instant placeholder while images arrive, so books are viewable immediately. |
-| Image fan-out | **Durable Functions** | A book needs 5–10 images; generating them inline would hold the HTTP call open for minutes. The orchestration fans out per-image activities, writes each to Blob as it lands, and the player upgrades placeholders progressively. |
-| Image serving | **Blob Storage + Azure CDN** | Immutable content-addressed blobs, cache-forever headers. |
+| Images | **`gpt-image-1`**, 1024×1536 portrait (2:3, cover-cropped into the adaptive canvas) | The compiler already emits an image *slot* per card (label + duotone hues). Generation fills the slot; the gradient stays as the instant placeholder while images arrive, so books are viewable immediately. Two funding paths picked by env: **Azure OpenAI** (`AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_KEY` + `AZURE_OPENAI_IMAGE_DEPLOYMENT`, bills credits, needs image-model quota) or **OpenAI direct** (`OPENAI_API_KEY`, pay-per-image, works today). Neither set → placeholders remain; no broken state. |
+| Image fan-out | **Client-driven, one image per call** (`POST /api/books/{id}/images`) | A book needs 5–10 images and SWA *managed* functions support neither Durable Functions nor multi-minute responses. So the composer fans out after Share: one slot per HTTP call (each ~20–40s, under the ~45s cap), the server patches the url onto the book doc (Cosmos partial update — concurrent slots can't clobber each other), and the player fades each picture in as it lands. Idempotent per slot; per-IP rate limit (`IMAGE_RATE_LIMIT`). |
+| Image serving | **Cosmos image docs behind `GET /api/images/{id}`** (Blob + CDN later) | Webp at our compression is ~100–400 KB — comfortably a Cosmos doc, so images need *zero new Azure resources*. Served with `Cache-Control: immutable` (a regenerated image gets a fresh id). The url shape is the seam: swapping the backing store to Blob Storage + CDN later changes nothing in stored books or pages. |
 | Web grounding | **Claude's server-side web search tool** | "Launch story for my bakery" can pull real hours/address; product cards get real URLs. Server-side tool — zero orchestration code in the Function, works only once generation is server-side. |
 | Moderation | **Azure AI Content Safety** | Public gallery means user content needs a gate. Text at generate time; images before publish. Ephemeral (private) books skip the strict gate. |
 | Observability | **Application Insights** | Per-generation traces: tokens, latency, cost, failure class. This is how credits burn gets watched. |
@@ -220,9 +220,19 @@ preferred.
    stored books are semantic stories recompiled at view time. The
    legacy museum pages (player.html library of wrap.co examples,
    howwemet.html reconstruction) were retired with it.
-5. **Images + search** — Durable fan-out to gpt-image-1 at 2:3
-   portrait, cover-cropped into the adaptive canvas with safe areas;
-   progressive placeholder upgrade; web search grounding for
-   business/place stories.
-6. **Accounts + tiers (parked)** — APIM subscriptions; revisit the key/auth
+5. **✅ Images** — gpt-image-1 at 2:3 portrait (1024×1536), cover-cropped
+   into the adaptive canvas; client-driven fan-out (one image per
+   `POST /api/books/{id}/images` call — SWA managed functions can't run
+   Durable), bytes stored as Cosmos image docs behind
+   `GET /api/images/{id}` with immutable caching; progressive
+   placeholder upgrade in the player. Provider by env:
+   `AZURE_OPENAI_*` (credits, quota-gated) or `OPENAI_API_KEY`
+   (pay-per-image); neither → duotone placeholders remain.
+   Still open from this phase: web search grounding for business/place
+   stories; an image-modality Content Safety pass at publish time
+   (the text gate runs today; generated images currently rely on the
+   image model's own safety system); Blob + CDN when scale warrants.
+6. **Web search grounding** — Claude's server-side web search tool for
+   business/place stories (real hours, addresses, product URLs).
+7. **Accounts + tiers (parked)** — APIM subscriptions; revisit the key/auth
    question here.
