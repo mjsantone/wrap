@@ -1,0 +1,252 @@
+<meta charset="utf-8">
+<title>The Gallery — BOOK</title>
+
+<style>
+/*@inline src/fonts.css*/
+/*@inline src/runtime.css*/
+
+  /* The gallery is a normal document page, not a fixed player stage. */
+  body { background: var(--ink); overflow-y: auto; }
+  .page {
+    min-height: 100vh; color: var(--paper);
+    display: flex; flex-direction: column;
+    font-family: 'Open Sans', 'Segoe UI', Arial, sans-serif;
+    padding: 26px clamp(20px, 6vw, 72px) 32px;
+  }
+  .page-inner { width: 100%; max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; flex: 1; }
+
+  .masthead {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 16px; border-bottom: 1px solid rgba(244,241,234,0.14);
+  }
+  .wordmark {
+    font-family: 'Fraunces', Georgia, serif; font-weight: 600;
+    font-size: 26px; letter-spacing: 0.01em; margin: 0;
+  }
+  .wordmark a { color: var(--paper); text-decoration: none; }
+  .wordmark b { color: var(--accent); font-weight: 600; }
+  .masthead nav a {
+    font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--muted); text-decoration: none; margin-left: 26px;
+  }
+  .masthead nav a:hover { color: var(--accent); }
+
+  .hero { margin: clamp(28px, 6vh, 64px) 0 0; }
+  .hero h1 {
+    font-family: 'Fraunces', Georgia, serif; font-weight: 550;
+    font-size: clamp(40px, 6.5vw, 72px); line-height: 1; letter-spacing: -0.01em;
+    margin: 0 0 16px;
+  }
+  .hero h1 b { color: var(--accent); }
+  .lede { font-size: 16px; line-height: 1.6; color: rgba(244,241,234,0.7); max-width: 56ch; margin: 0; }
+
+  /* ---- the shelf ---- */
+  .shelf {
+    margin-top: 36px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px;
+  }
+  .tile { display: block; text-decoration: none; color: var(--paper); }
+  .thumb {
+    position: relative; aspect-ratio: 640 / 910; overflow: hidden;
+    background: #1a191d; border: 1px solid rgba(244,241,234,0.14); border-radius: 2px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .tile:hover .thumb { border-color: var(--accent); transform: translateY(-3px); }
+  .thumb .canvas { pointer-events: none; }
+  .meta { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+  .tile-title {
+    font-family: 'Fraunces', Georgia, serif; font-weight: 550; font-size: 17px; line-height: 1.25;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .tile-date {
+    font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---- states ---- */
+  .state-box { margin: 64px auto; text-align: center; max-width: 440px; }
+  .state-box[hidden] { display: none; }
+  .state-box p { color: var(--muted); font-size: 15px; line-height: 1.65; margin: 0 0 18px; }
+  .state-box a { color: var(--accent); text-decoration: none; }
+  .sk-spinner-wave { width: 200px; height: 45px; text-align: center; font-size: 10px; margin: 0 auto; }
+  .sk-spinner-wave div {
+    background-color: rgba(255,90,54,.85); height: 30px; width: 17px; display: inline-block;
+    animation: sk-waveStretchDelay 1.2s infinite ease-in-out; margin: 0 2px;
+  }
+  .sk-spinner-wave .sk-rect2 { animation-delay: -1.1s; }
+  .sk-spinner-wave .sk-rect3 { animation-delay: -1.0s; }
+  .sk-spinner-wave .sk-rect4 { animation-delay: -0.9s; }
+  .sk-spinner-wave .sk-rect5 { animation-delay: -0.8s; }
+  @keyframes sk-waveStretchDelay {
+    0%, 100% { opacity: 0.9; transform: scale(1); }
+    50% { opacity: 0.2; transform: scaleY(0.8); }
+  }
+
+  .more-row { display: flex; justify-content: center; margin-top: 36px; }
+  .more-row[hidden] { display: none; }
+  .btn-ghost {
+    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 12px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    background: transparent; color: rgba(244,241,234,0.75);
+    border: 1px solid rgba(244,241,234,0.28); border-radius: 2px; cursor: pointer;
+    padding: 14px 30px; transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover:not(:disabled) { color: var(--paper); border-color: var(--accent); }
+  .btn-ghost:disabled { opacity: 0.45; cursor: default; }
+
+  .footer {
+    margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(244,241,234,0.14);
+    display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.1em;
+    color: var(--muted); margin-top: 48px;
+  }
+  .footer a { color: var(--muted); text-decoration: none; }
+  .footer a:hover { color: var(--accent); }
+</style>
+
+<div class="page">
+  <div class="page-inner">
+    <header class="masthead">
+      <p class="wordmark"><a href="./">BOOK<b>.</b></a></p>
+      <nav>
+        <a href="./">Compose</a>
+        <a href="player.html">Library</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>The Gallery<b>.</b></h1>
+      <p class="lede">Books people have told and chosen to share.
+      Tap one to flip through it — or <a href="./" style="color: var(--accent); text-decoration: none;">tell your own</a>.</p>
+    </section>
+
+    <div class="state-box" id="loadingBox">
+      <div class="sk-spinner-wave">
+        <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
+        <div class="sk-rect4"></div><div class="sk-rect5"></div>
+      </div>
+    </div>
+    <div class="state-box" id="emptyBox" hidden>
+      <p>Nothing on the shelf yet. Generate a book, share it, and be the
+      first to add one to the gallery.</p>
+      <a href="./">Tell a story →</a>
+    </div>
+    <div class="state-box" id="errorBox" hidden>
+      <p id="errorMsg">The gallery needs the hosted deployment.</p>
+      <a href="./">Back to the composer →</a>
+    </div>
+
+    <div class="shelf" id="shelf"></div>
+
+    <div class="more-row" id="moreRow" hidden>
+      <button class="btn-ghost" id="moreBtn">More books</button>
+    </div>
+
+    <footer class="footer">
+      <span>Set in Fraunces · A revival of the wrap.co flip-book</span>
+      <span><a href="./">Compose</a> &nbsp;·&nbsp; <a href="player.html">Library</a></span>
+    </footer>
+  </div>
+</div>
+
+<script>
+/*@inline src/runtime.js*/
+</script>
+<script>
+/*@inline src/compile.js*/
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var shelf = document.getElementById('shelf');
+  var loadingBox = document.getElementById('loadingBox');
+  var emptyBox = document.getElementById('emptyBox');
+  var errorBox = document.getElementById('errorBox');
+  var errorMsg = document.getElementById('errorMsg');
+  var moreRow = document.getElementById('moreRow');
+  var moreBtn = document.getElementById('moreBtn');
+  var PAGE = 24;
+  var offset = 0;
+
+  function rescale() {
+    Array.prototype.forEach.call(shelf.querySelectorAll('.thumb'), function (thumb) {
+      var cv = thumb.querySelector('.canvas');
+      if (cv) cv.style.transform = 'scale(' + (thumb.clientWidth / 640) + ')';
+    });
+  }
+  if (window.ResizeObserver) new ResizeObserver(rescale).observe(shelf);
+  window.addEventListener('resize', rescale);
+
+  /* A tile is a live mini-render of the book's cover card — the same
+   * runtime that plays the book, scaled down. No screenshots anywhere. */
+  function tile(entry) {
+    var book = BookCompiler.compileBook(entry.story || {});
+    if (!book.cards.length) return null;
+
+    var a = document.createElement('a');
+    a.className = 'tile';
+    a.href = 'b/' + encodeURIComponent(entry.id);
+
+    var thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    var canvas = document.createElement('div');
+    canvas.className = 'canvas';
+    var cover = book.cards[0];
+    if (cover.bg) thumb.style.background = cover.bg;
+    (cover.k || []).forEach(function (node) {
+      BookRuntime.render(node, canvas, { bookName: book.name });
+    });
+    thumb.appendChild(canvas);
+    a.appendChild(thumb);
+
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    var title = document.createElement('span');
+    title.className = 'tile-title';
+    title.textContent = (entry.story && entry.story.name) || 'Untitled';
+    var date = document.createElement('span');
+    date.className = 'tile-date';
+    if (entry.publishedAt) {
+      date.textContent = new Date(entry.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    meta.appendChild(title);
+    meta.appendChild(date);
+    a.appendChild(meta);
+    return a;
+  }
+
+  function fail(msg) {
+    loadingBox.hidden = true;
+    moreRow.hidden = true;
+    errorMsg.textContent = msg;
+    errorBox.hidden = false;
+  }
+
+  async function load() {
+    moreBtn.disabled = true;
+    var res;
+    try {
+      res = await fetch('/api/gallery?limit=' + PAGE + '&offset=' + offset);
+    } catch (e) {
+      return fail('The gallery lives on the hosted deployment — this copy of the site has no API.');
+    }
+    if (!res.ok) return fail('Couldn’t load the gallery right now (HTTP ' + res.status + '). Try a refresh.');
+    var data = await res.json();
+
+    loadingBox.hidden = true;
+    (data.books || []).forEach(function (entry) {
+      var t = tile(entry);
+      if (t) shelf.appendChild(t);
+    });
+    rescale();
+    offset += (data.books || []).length;
+    if (offset === 0) emptyBox.hidden = false;
+    moreRow.hidden = !data.hasMore;
+    moreBtn.disabled = false;
+  }
+
+  moreBtn.addEventListener('click', load);
+  load();
+})();
+</script>

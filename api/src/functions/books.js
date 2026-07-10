@@ -3,6 +3,7 @@
 const { app } = require('@azure/functions');
 const { validateStory, newId, ID_PATTERN, MAX_BODY_BYTES } = require('../lib/story');
 const { getContainer } = require('../lib/cosmos');
+const moderation = require('../lib/moderation');
 
 function json(status, body) {
   return { status, jsonBody: body };
@@ -64,5 +65,50 @@ app.http('books-get', {
       if (err && err.code === 404) return json(404, { error: 'book not found' });
       throw err;
     }
+  },
+});
+
+/* POST /api/books/{id}/publish  →  200 { id, visibility: 'published' }
+ * Promotes an unlisted book into the public gallery feed. Runs the
+ * Content Safety gate when configured; a service failure refuses to
+ * publish rather than failing open. Idempotent. */
+app.http('books-publish', {
+  route: 'books/{id}/publish',
+  methods: ['POST'],
+  authLevel: 'anonymous',
+  handler: async (request, context) => {
+    const id = request.params.id || '';
+    if (!ID_PATTERN.test(id)) return json(400, { error: 'malformed book id' });
+
+    let resource;
+    try {
+      ({ resource } = await getContainer().item(id, id).read());
+    } catch (err) {
+      if (err && err.code === 404) return json(404, { error: 'book not found' });
+      throw err;
+    }
+    if (!resource) return json(404, { error: 'book not found' });
+    if (resource.visibility === 'published') {
+      return json(200, { id, visibility: 'published' });
+    }
+
+    let verdict;
+    try {
+      verdict = await moderation.check(resource.story);
+    } catch (err) {
+      context.error('moderation failed', err);
+      return json(502, { error: 'Couldn’t review this book right now — try again in a bit.' });
+    }
+    if (!verdict.allowed) {
+      context.log(`publish rejected id=${id} category=${verdict.category} severity=${verdict.severity}`);
+      return json(422, { error: 'This book can’t be published to the public gallery.' });
+    }
+
+    resource.visibility = 'published';
+    resource.publishedAt = new Date().toISOString();
+    resource.moderated = Boolean(verdict.moderated);
+    await getContainer().item(id, id).replace(resource);
+    context.log(`book published id=${id} moderated=${resource.moderated}`);
+    return json(200, { id, visibility: 'published' });
   },
 });

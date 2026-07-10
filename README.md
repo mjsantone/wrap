@@ -16,6 +16,7 @@ original format; the product here is BOOK.)
 | [`player.html`](player.html) | **Book Library** — a generic player that renders any original wrap.co wrap from its JSON. Seven reverse-engineered examples embedded (`#b0`–`#b6`). |
 | [`howwemet.html`](howwemet.html) | **How We Met** — a full-fidelity handcrafted reconstruction of the original example wrap. |
 | `b.html` (`/b/{id}`) | **Book Viewer** — plays a shared book fetched from the API. Share links work on the Azure deployment (see below); on GitHub Pages the Share button explains itself. |
+| `gallery.html` (`/gallery`) | **The Gallery** — books people have published, as live mini-render cover thumbnails. Hosted deployment only. |
 
 ## How generation works
 
@@ -128,7 +129,7 @@ python3 build.py --check  # what CI runs: fails if outputs are stale
 | `src/fonts.css` | All families as data-URI woff2 — Fraunces (brand), Montserrat, Josefin Slab, Open Sans |
 | `src/data/books-data.js` | The embedded library examples |
 | `src/pages/*.html` | Per-page templates (chrome + wiring); `/*@inline path*/` tokens mark where sources are embedded |
-| `api/` | Azure Functions API (persistence + share links) — `node --test` in `api/` runs its unit tests |
+| `api/` | Azure Functions API (persistence, share links, hosted generation, gallery + publish) — `node --test` in `api/` runs its unit tests |
 | `staticwebapp.config.json` | Azure Static Web Apps config: `/b/{id}` rewrite, API runtime |
 
 The outputs stay committed so GitHub Pages serves them directly; the
