@@ -249,18 +249,6 @@ body { margin: 0; background: #000; }
   .btn-primary:hover:not(:disabled) { transform: translateY(-1px); background: #ff7355; }
   .btn-ghost { background: transparent; color: rgba(244,241,234,0.75); border-color: rgba(244,241,234,0.28); }
   .btn-ghost:hover { color: var(--paper); border-color: var(--accent); }
-  .key-details { margin-top: 26px; color: var(--muted); font-size: 13px; }
-  .key-details summary { cursor: pointer; user-select: none; color: var(--muted); }
-  .key-details summary:hover { color: var(--paper); }
-  .key-row { display: flex; gap: 10px; margin-top: 12px; }
-  .key-row input {
-    flex: 1; background: transparent; color: var(--paper);
-    border: 1px solid rgba(244,241,234,0.22); border-radius: 2px; padding: 11px 14px;
-    font-family: monospace; font-size: 13px; outline: none;
-  }
-  .key-row input:focus { border-color: var(--accent); }
-  .key-note { line-height: 1.55; margin-top: 10px; }
-  .key-note a { color: var(--accent); text-decoration: none; }
   .error-box {
     margin-top: 18px;
     background: rgba(220, 70, 70, 0.08); border: 1px solid rgba(220,70,70,0.35);
@@ -344,7 +332,6 @@ body { margin: 0; background: #000; }
         placeholder="How my grandparents met in Lisbon in 1962…"></textarea>
       <div class="actions">
         <button class="btn btn-primary" id="generateBtn">Book it</button>
-        <button class="btn btn-ghost" id="sampleBtn">Try a sample</button>
       </div>
     </div>
 
@@ -357,20 +344,6 @@ body { margin: 0; background: #000; }
     </div>
 
     <div class="error-box" id="errorBox" hidden></div>
-
-    <details class="key-details" id="keyDetails">
-      <summary>API key (only needed where hosted generation isn’t set up)</summary>
-      <div class="key-row">
-        <input type="password" id="keyInput" placeholder="sk-ant-…" autocomplete="off"/>
-        <button class="btn btn-ghost" id="saveKeyBtn" style="padding:11px 18px;">Save</button>
-        <button class="btn btn-ghost" id="clearKeyBtn" style="padding:11px 18px;">Clear</button>
-      </div>
-      <p class="key-note">Generation calls the Anthropic API directly from your browser.
-        Your key is stored only in this browser (localStorage) and sent only to api.anthropic.com.
-        Create a spend-limited key at
-        <a href="https://platform.claude.com" target="_blank" rel="noopener noreferrer">platform.claude.com</a>.
-        “Try a sample” works without a key.</p>
-    </details>
 
     <footer class="footer">
       <span>Set in Fraunces</span>
@@ -1114,25 +1087,10 @@ body { margin: 0; background: #000; }
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
 
-  /* ---------- generation: browser call to the Anthropic API ---------- */
-  function getKey() {
-    try { return localStorage.getItem('anthropic_api_key') || ''; }
-    catch (e) { return ''; }
-  }
-  function setKey(v) {
-    try { localStorage.setItem('anthropic_api_key', v); return true; }
-    catch (e) { return false; }
-  }
-  function clearKey() {
-    try { localStorage.removeItem('anthropic_api_key'); } catch (e) {}
-  }
-
-  var GEN_TIMEOUT_MS = 180000; // 3 min — adaptive thinking on this task can run long
-
-  /* Preferred path: the hosted API generates server-side (no visitor key).
-   * Returns the story, or null when no server is available (GitHub Pages,
-   * or the API has no model keys configured) — the caller then falls back
-   * to the browser bring-your-own-key path. Real generation errors throw. */
+  /* ---------- generation: the hosted API, server-side ----------
+   * Returns the story, or null when no server is available (static
+   * hosting, or the API has no model keys configured). Real generation
+   * errors throw. */
   async function generateServer(storyText) {
     var res;
     try {
@@ -1152,75 +1110,14 @@ body { margin: 0; background: #000; }
     return data.story;
   }
 
-  async function generate(storyText) {
-    var key = getKey();
-    if (!key) throw new Error('NO_KEY');
-    var controller = new AbortController();
-    var timer = setTimeout(function () { controller.abort(); }, GEN_TIMEOUT_MS);
-    var res;
-    try {
-      res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-opus-4-8',
-          max_tokens: 16000,
-          thinking: { type: 'adaptive' },
-          system: BookCompiler.SYSTEM_PROMPT,
-          output_config: { format: { type: 'json_schema', schema: BookCompiler.STORY_SCHEMA } },
-          messages: [{ role: 'user', content: 'Create a book for this story:\n\n' + storyText }]
-        })
-      });
-    } catch (e) {
-      clearTimeout(timer);
-      if (e && e.name === 'AbortError') throw new Error('Timed out after 3 minutes. Try again or shorten the prompt.');
-      throw new Error('Network error — check your connection and try again.');
-    }
-    clearTimeout(timer);
-    if (!res.ok) {
-      var errBody = null;
-      try { errBody = await res.json(); } catch (e) {}
-      var msg = (errBody && errBody.error && errBody.error.message) || ('HTTP ' + res.status);
-      throw new Error(msg);
-    }
-    var data = await res.json();
-    if (data.stop_reason === 'refusal') {
-      throw new Error('The model declined this request. Try rephrasing your story.');
-    }
-    if (data.stop_reason === 'max_tokens') {
-      throw new Error('The story came out too long — try a shorter prompt.');
-    }
-    var text = '';
-    (data.content || []).forEach(function (b) { if (b.type === 'text') text += b.text; });
-    return JSON.parse(text);
-  }
-
   /* ---------- UI wiring ---------- */
   var homeView = document.getElementById('homeView');
   var storyInput = document.getElementById('storyInput');
   var generateBtn = document.getElementById('generateBtn');
-  var sampleBtn = document.getElementById('sampleBtn');
   var loading = document.getElementById('loading');
   var errorBox = document.getElementById('errorBox');
-  var keyInput = document.getElementById('keyInput');
-  var keyDetails = document.getElementById('keyDetails');
   var lastStoryText = '';
   var lastStory = null;
-
-  keyInput.value = getKey();
-  document.getElementById('saveKeyBtn').addEventListener('click', function () {
-    if (setKey(keyInput.value.trim())) { keyDetails.open = false; }
-    else { showError('This browser is blocking local storage, so the key can’t be saved here.'); }
-  });
-  document.getElementById('clearKeyBtn').addEventListener('click', function () {
-    clearKey(); keyInput.value = '';
-  });
 
   function showError(msg) {
     errorBox.textContent = msg;
@@ -1367,27 +1264,20 @@ body { margin: 0; background: #000; }
 
   async function runGenerate(text) {
     errorBox.hidden = true;
-    generateBtn.disabled = true; sampleBtn.disabled = true;
+    generateBtn.disabled = true;
     loading.hidden = false;
     lastStoryText = text;
     try {
       var story = await generateServer(text);
       if (story === null) {
-        // No hosted generation here — browser bring-your-own-key fallback.
-        if (!getKey()) {
-          keyDetails.open = true;
-          showError('This deployment has no hosted generation — add your Anthropic API key below (or use “Try a sample”).');
-          return;
-        }
-        story = await generate(text);
+        showError('Generation isn’t available on this copy of the site — it needs the hosted deployment.');
+        return;
       }
       showPlayer(story);
     } catch (e) {
-      showError(e.message === 'NO_KEY'
-        ? 'Add your Anthropic API key first (or use “Try a sample”).'
-        : 'Generation failed: ' + e.message);
+      showError('Generation failed: ' + e.message);
     } finally {
-      generateBtn.disabled = false; sampleBtn.disabled = false;
+      generateBtn.disabled = false;
       loading.hidden = true;
     }
   }
@@ -1399,11 +1289,6 @@ body { margin: 0; background: #000; }
   });
   storyInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generateBtn.click();
-  });
-
-  sampleBtn.addEventListener('click', function () {
-    errorBox.hidden = true;
-    showPlayer(BookCompiler.SAMPLE);
   });
 })();
 </script>

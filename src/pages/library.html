@@ -125,11 +125,6 @@
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
     </div>
-    <div class="state-box" id="emptyBox" hidden>
-      <p>Nothing on the shelf yet. Generate a book, share it, and be the
-      first to add one to the library.</p>
-      <a href="./">Tell a story →</a>
-    </div>
     <div class="state-box" id="errorBox" hidden>
       <p id="errorMsg">The library needs the hosted deployment.</p>
       <a href="./">Back to the composer →</a>
@@ -160,7 +155,6 @@
 
   var shelf = document.getElementById('shelf');
   var loadingBox = document.getElementById('loadingBox');
-  var emptyBox = document.getElementById('emptyBox');
   var errorBox = document.getElementById('errorBox');
   var errorMsg = document.getElementById('errorMsg');
   var moreRow = document.getElementById('moreRow');
@@ -185,7 +179,7 @@
 
     var a = document.createElement('a');
     a.className = 'tile';
-    a.href = 'b/' + encodeURIComponent(entry.id);
+    a.href = entry.sample ? 'b.html?id=sample' : 'b/' + encodeURIComponent(entry.id);
 
     var thumb = document.createElement('div');
     thumb.className = 'thumb';
@@ -206,7 +200,9 @@
     title.textContent = (entry.story && entry.story.name) || 'Untitled';
     var date = document.createElement('span');
     date.className = 'tile-date';
-    if (entry.publishedAt) {
+    if (entry.sample) {
+      date.textContent = 'The sample book';
+    } else if (entry.publishedAt) {
       date.textContent = new Date(entry.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     }
     meta.appendChild(title);
@@ -215,11 +211,18 @@
     return a;
   }
 
+  function appendSample() {
+    if (document.getElementById('sampleTile')) return;
+    var t = tile({ sample: true, story: BookCompiler.SAMPLE });
+    if (t) { t.id = 'sampleTile'; shelf.appendChild(t); rescale(); }
+  }
+
   function fail(msg) {
     loadingBox.hidden = true;
     moreRow.hidden = true;
     errorMsg.textContent = msg;
     errorBox.hidden = false;
+    appendSample();
   }
 
   async function load() {
@@ -240,8 +243,8 @@
     });
     rescale();
     offset += (data.books || []).length;
-    if (offset === 0) emptyBox.hidden = false;
     moreRow.hidden = !data.hasMore;
+    if (!data.hasMore) appendSample();
     moreBtn.disabled = false;
   }
 

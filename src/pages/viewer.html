@@ -108,6 +108,13 @@
   var m = location.pathname.match(/\/b\/([1-9A-HJ-NP-Za-km-z]{8,24})/);
   var id = (m && m[1]) || new URLSearchParams(location.search).get('id');
 
+  /* the built-in sample — the library's seed book, played without the API */
+  if (id === 'sample' || /\/b\/sample$/.test(location.pathname)) {
+    stateBox.hidden = true;
+    player.loadBook(BookCompiler.compileBook(BookCompiler.SAMPLE, { height: BookRuntime.canvasHeight() }));
+    return;
+  }
+
   if (!id) {
     fail('This link is missing its book id.');
     return;
