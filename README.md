@@ -8,18 +8,18 @@ Apps (hosted generation, sharing, and the library)
 
 | Page | What it is |
 | --- | --- |
-| [`index.html`](index.html) | **The Composer** — type a story, Claude writes a book from the format's primitives, and it plays instantly. Hosted generation on Azure (no key needed); bring-your-own-key fallback elsewhere; "Try a sample" always works. |
-| `library.html` (`/library`) | **The Library** — books people have told and put on the shelf, as live mini-render cover thumbnails. Hosted deployment only. |
+| [`index.html`](index.html) | **The Composer** — type a story, Claude writes a book from the format's primitives, and it plays instantly. Hosted generation on Azure — no key needed. |
+| `library.html` (`/library`) | **The Library** — books people have told and put on the shelf, as live mini-render cover thumbnails. The built-in sample book seeds the end of the shelf (and plays anywhere, API or not). |
 | `b.html` (`/b/{id}`) | **The Viewer** — plays a shared book fetched from the API. |
 
 ## How generation works
 
-On the hosted (Azure) deployment, the homepage POSTs your story to
-`/api/generate`, which calls Claude (`claude-opus-4-8`) server-side — visitors
-don't need an API key. Where no API exists (GitHub Pages) or no model key is
-configured, the page falls back to calling the Anthropic API directly from the
-browser with your own key. Either way the request uses a structured-output JSON
-schema so the response is guaranteed-valid.
+The homepage POSTs your story to `/api/generate`, which calls Claude
+(`claude-opus-4-8`) server-side — visitors don't need an API key. The request
+uses a structured-output JSON schema so the response is guaranteed-valid.
+Where no hosted API exists (plain static hosting), composing is unavailable,
+but every stored book — and the built-in sample (`/b.html?id=sample`) — still
+plays.
 
 The model writes a **semantic story schema** — card types like `cover`, `prose`,
 `gallery`, `quote`, `product`, `video`, `map`, each with copy and a color mood —
