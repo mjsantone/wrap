@@ -990,6 +990,52 @@ body { margin: 0; background: #000; }
     return;
   }
 
+  /* ---------- late-arriving pictures ----------
+   * A link opened while the sharer's image fan-out is still running has
+   * empty slots. Re-read the book on an interval and fade each picture
+   * in as it lands (render() tags slot elements with data-slot), giving
+   * up after roughly the fan-out's own worst-case duration. */
+  var POLL_MS = window.BOOK_IMG_POLL_MS || 8000; /* tests override the interval */
+  var MAX_POLLS = 24;
+
+  function imageUrls(story) {
+    var map = {};
+    ((story && story.cards) || []).forEach(function (c, i) {
+      if (c && c.image) map[String(i)] = c.image.url || '';
+      ((c && c.items) || []).slice(0, 5).forEach(function (it, j) {
+        if (it && it.image) map[i + '.' + j] = it.image.url || '';
+      });
+    });
+    return map;
+  }
+
+  function watchImages(story) {
+    var missing = [];
+    var urls = imageUrls(story);
+    for (var k in urls) { if (!urls[k]) missing.push(k); }
+    if (!missing.length) return;
+    var polls = 0;
+    var timer = setInterval(function () {
+      if (++polls > MAX_POLLS) return clearInterval(timer);
+      fetch('/api/books/' + encodeURIComponent(id))
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (doc) {
+          if (!doc) return;
+          var now = imageUrls(doc.story || {});
+          missing = missing.filter(function (k) {
+            if (!now[k]) return true;
+            Array.prototype.forEach.call(
+              document.querySelectorAll('[data-slot="' + k + '"]'),
+              function (el) { BookRuntime.attachImage(el, now[k]); }
+            );
+            return false;
+          });
+          if (!missing.length) clearInterval(timer);
+        })
+        .catch(function () {});
+    }, POLL_MS);
+  }
+
   fetch('/api/books/' + encodeURIComponent(id))
     .then(function (res) {
       if (res.status === 404) throw new Error('NOT_FOUND');
@@ -1001,6 +1047,7 @@ body { margin: 0; background: #000; }
       if (book.cards.length < 2) throw new Error('EMPTY');
       stateBox.hidden = true;
       player.loadBook(book);
+      watchImages(doc.story);
     })
     .catch(function (e) {
       if (e && e.message === 'NOT_FOUND') fail('This book doesn’t exist — the link may be mistyped or the book was removed.');
