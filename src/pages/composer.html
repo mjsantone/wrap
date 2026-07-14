@@ -87,7 +87,15 @@
     0%, 100% { opacity: 0.9; transform: scale(1); }
     50% { opacity: 0.2; transform: scaleY(0.8); }
   }
-  .loading-note { color: var(--muted); font-size: 12px; margin-top: 14px; font-family: 'Montserrat', sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
+  /* generation loading — a full-page dim with the wave centered */
+  .loading {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(16, 15, 18, 0.88);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .loading .wordmark { margin-bottom: 22px; }
+  .loading .sk-spinner-wave { margin: 0; }
+  .loading-note { color: var(--muted); font-size: 12px; margin-top: 16px; font-family: 'Montserrat', sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
   .loading[hidden] { display: none; }
 
   .footer {
@@ -106,8 +114,8 @@
     padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
   }
   .back-btn:hover, .back-btn:focus-visible { opacity: 1; }
-  .regen-btn { left: auto; right: 10px; }
-  .share-btn { left: auto; right: 136px; }
+  .pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
+  .pv-actions .back-btn { position: static; }
   .share-toast {
     position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
     z-index: 1015; max-width: 88%;
@@ -153,6 +161,7 @@
     </div>
 
     <div class="loading" id="loading" hidden>
+      <p class="wordmark">BOOK<b>.</b></p>
       <div class="sk-spinner-wave">
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
@@ -187,8 +196,11 @@
     <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
 
     <button class="back-btn" id="backBtn">← New story</button>
-    <button class="back-btn share-btn" id="shareBtn">🔗 Share</button>
-    <button class="back-btn regen-btn" id="regenBtn">↻ Regenerate</button>
+    <div class="pv-actions">
+      <button class="back-btn" id="shareBtn">🔗 Share</button>
+      <button class="back-btn" id="libBtn">＋ Library</button>
+      <button class="back-btn" id="regenBtn">↻ Regenerate</button>
+    </div>
     <div class="share-toast" id="shareToast" hidden></div>
   </div>
 </div>
@@ -260,6 +272,7 @@
       homeView.classList.add('hidden');
       playerStage.hidden = false;
       lastStory = story;
+      lastShareId = null; /* a fresh book hasn't been shared yet */
       player.loadBook(book);
     } catch (e) {
       showError('Could not render the generated book: ' + e.message);
@@ -355,33 +368,45 @@
     }
   });
 
+  /* Store the current book once; Share and ＋ Library both go through
+   * here, so whichever is tapped first creates the document and kicks
+   * off the image fan-out. */
+  async function ensureShared() {
+    if (lastShareId) return { id: lastShareId, slots: null };
+    var res = await fetch('/api/books', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ story: lastStory })
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+    lastShareId = data.id;
+    var slots = data.imageSlots || [];
+    if (slots.length) fanOutImages(data.id, slots);
+    return { id: data.id, slots: slots };
+  }
+
+  function paintingNote(slots) {
+    return slots && slots.length
+      ? '<br><span id="imgNote">Painting the pictures — they’ll fade in as they finish.</span>'
+      : '';
+  }
+
   shareBtn.addEventListener('click', async function () {
     if (!lastStory) return;
     shareBtn.disabled = true;
     shareBtn.textContent = 'Sharing…';
     try {
-      var res = await fetch('/api/books', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ story: lastStory })
-      });
-      if (!res.ok) {
-        var err = null;
-        try { err = await res.json(); } catch (e) {}
-        throw new Error((err && err.error) || ('HTTP ' + res.status));
-      }
-      var data = await res.json();
-      lastShareId = data.id;
-      var link = location.origin + '/b/' + data.id;
+      var shared = await ensureShared();
+      var link = location.origin + '/b/' + shared.id;
       var copied = false;
       try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
-      var slots = data.imageSlots || [];
       toast((copied ? 'Link copied — ' : 'Your book link: ') +
         '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
         '<button type="button" id="galleryBtn">Add to the library</button>' +
-        (slots.length ? '<br><span id="imgNote">Painting the pictures — they’ll fade in as they finish.</span>' : ''),
+        paintingNote(shared.slots),
         true);
-      if (slots.length) fanOutImages(data.id, slots);
     } catch (e) {
       toast('Sharing isn’t available here' +
         (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') +
@@ -389,6 +414,28 @@
     } finally {
       shareBtn.disabled = false;
       shareBtn.textContent = '🔗 Share';
+    }
+  });
+
+  /* ＋ Library: share (if not yet shared) and publish, in one tap. */
+  var libBtn = document.getElementById('libBtn');
+  libBtn.addEventListener('click', async function () {
+    if (!lastStory) return;
+    libBtn.disabled = true;
+    libBtn.textContent = 'Saving…';
+    try {
+      var shared = await ensureShared();
+      var res = await fetch('/api/books/' + encodeURIComponent(shared.id) + '/publish', { method: 'POST' });
+      var data = null;
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      toast('On the shelf — <a href="library.html">see the library →</a>' + paintingNote(shared.slots), true);
+    } catch (e) {
+      toast('Couldn’t save to the library' +
+        (e && e.message ? ': ' + BookRuntime.escapeHtml(e.message) : ''));
+    } finally {
+      libBtn.disabled = false;
+      libBtn.textContent = '＋ Library';
     }
   });
 
