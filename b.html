@@ -903,14 +903,19 @@ body { margin: 0; background: #000; }
   "- prose: a narrative beat. kicker (optional small line), title (2-5 words), body (2-4 sentences, warm and concrete).",
   "- gallery: 3-4 moments the reader scrolls through vertically. Each item: kicker (place/context, 1-3 words), title (2-3 words), body (1-2 sentences).",
   "- quote: a poem, letter excerpt, or meaningful quotation. lines (each line short), attribution (optional). Use at most once.",
-  "- product: something offered or celebrated, with a call to action. title, body, optional price (like \"$18\"), button (2-3 words), url (real if given, else null).",
+  "- product: something offered or celebrated, with a call to action. title, body, optional price (like \"$18\"), button (2-3 words), url (real if given or verified, else null).",
   "- video: only if the user mentions a video or gives a YouTube link. url required.",
   "- map: only if the story has a real place worth visiting. address = the street address or place name. title like \"VISIT US\".",
   "",
-  "Every card and gallery item needs an image: h1 and h2 are HSL hues 0-359 chosen to evoke the scene (the renderer draws a dark duotone gradient - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340). label is a 2-5 word description of the photo that WOULD be there (e.g. \"sunset over the pier\").",
+  "Accuracy rules - these outrank style:",
+  "- Build from the user's details. Never invent facts: no made-up names, dates, addresses, prices, URLs, or historical claims the user didn't give you. You may invent atmosphere (weather, light, small sensory detail) - never verifiable specifics.",
+  "- If web search is available and the story involves a real business, venue, event, or public place, search to ground it: the real address for a map card, real hours/prices/URLs for a product card, correct spellings and dates. If you can't verify a fact, leave that field null or omit the card - a smaller true book beats a padded invented one.",
+  "- Only attribute a quotation to a real person if it is genuinely theirs. Otherwise attribute it to someone in the story, or leave attribution null.",
   "",
-  "Rules: exactly one cover, first. Vary card types. Choose hues that flow like a color story across the book. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
-  "Write with specificity and heart. Use the user's details; invent tasteful specifics where needed."
+  "Every card and gallery item needs an image. Its label is the brief a photographer would shoot from: 4-8 concrete words naming subject, setting, and light or time of day (e.g. \"weathered lighthouse on a cliff at dusk\", \"flour-dusted hands shaping dough, morning window light\"). Photographable things only - no abstractions, no emotions as subjects, no readable text or signage, no real people's names or likenesses. h1 and h2 are HSL hues 0-359 evoking the scene (the renderer draws a dark duotone gradient until the photo arrives - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340).",
+  "",
+  "Composition rules: exactly one cover, first. Sequence like a small book - the cover makes a promise, the middle develops it (prose and gallery carry the story), and the last card lands it (a quote, a map, or a closing prose beat). Vary card types; never two galleries. Pick one palette family for the whole book and let hues drift within it, so the book reads as one color story. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
+  "Write with specificity and heart, in the register the story calls for - a love story is not a product launch."
 ]
 ).join('\n');
 

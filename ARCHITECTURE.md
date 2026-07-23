@@ -232,7 +232,14 @@ preferred.
    stories; an image-modality Content Safety pass at publish time
    (the text gate runs today; generated images currently rely on the
    image model's own safety system); Blob + CDN when scale warrants.
-6. **Web search grounding** — Claude's server-side web search tool for
-   business/place stories (real hours, addresses, product URLs).
+6. **✅ Web search grounding** — Claude's server-side web search tool
+   (`web_search_20260209`, max 3 uses/generation) attached to `/api/generate`;
+   the system prompt directs it at real businesses/places only, so personal
+   stories never search. Accuracy rules in the prompt forbid invented facts —
+   unverifiable fields go null instead. Degrades gracefully: a workspace that
+   rejects server tools (400) is remembered and generation retries without
+   them, independently of the structured-outputs fallback; `pause_turn`
+   resumes are bounded by the shared request deadline. Disable via
+   `GENERATION_WEB_SEARCH=0`.
 7. **Accounts + tiers (parked)** — APIM subscriptions; revisit the key/auth
    question here.
