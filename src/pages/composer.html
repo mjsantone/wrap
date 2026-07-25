@@ -341,7 +341,7 @@
   }
   function showPlayer(story) {
     try {
-      var book = BookCompiler.compileBook(story, { height: BookRuntime.canvasHeight() });
+      var book = BookCompiler.compileBook(story, { height: BookRuntime.canvasHeight(), date: new Date().toISOString() });
       if (book.cards.length < 2) throw new Error('Empty book');
       homeView.classList.add('hidden');
       playerStage.hidden = false;

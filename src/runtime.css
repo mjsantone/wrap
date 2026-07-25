@@ -70,6 +70,18 @@ html, body { overscroll-behavior: none; }
   object-fit: cover; opacity: 0; transition: opacity 0.6s ease;
 }
 .img-real.loaded { opacity: 1; }
+/* palette tone-map: rides above the photo, invisible until it loads */
+.img-tone {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  mix-blend-mode: color; opacity: 0; transition: opacity 0.8s ease;
+}
+.img-real { z-index: 1; }
+.cmp-image:has(.img-real.loaded) .img-tone { opacity: 0.24; }
+/* editorial drop cap on left-set prose */
+.dropcap {
+  float: left; font-family: 'Fraunces', Georgia, serif; font-weight: 550;
+  font-size: 3.05em; line-height: 0.82; padding: 0.04em 0.09em 0 0;
+}
 /* subtle loading state: the scene label breathes quietly on the solid tone */
 .img-ph span {
   font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.3em;
@@ -124,6 +136,11 @@ html, body { overscroll-behavior: none; }
 .cmp-widget:hover { background: rgba(255,90,54,0.35) !important; }
 .cmp-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .cmp-end p { color: #fff; font-weight: 200; font-size: 26px; margin: 5px 0; font-family: 'Open Sans', sans-serif; max-width: 85%; }
+.cmp-end .end-colophon {
+  font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: rgba(244,241,234,0.45); line-height: 2.1;
+  margin-bottom: 26px;
+}
 .cmp-end .end-wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 34px; letter-spacing: 0.04em; color: #fff; margin-top: 6px; }
 .cmp-end .end-wordmark b { color: var(--accent); }
 .cmp-end .replay {

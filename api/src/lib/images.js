@@ -115,6 +115,23 @@ function hueName(h) {
   return 'crimson';
 }
 
+/* Which band the page's text sits on — mirrors the compiler's defaults —
+ * so the photograph is composed with calm negative space under the type. */
+function textBand(slot) {
+  if (slot.item) return 'bottom'; // legacy gallery moments
+  const L = slot.card.layout || {};
+  if (L.band === 'top' || L.band === 'middle' || L.band === 'bottom') return L.band;
+  const t = slot.card.type;
+  if (t === 'cover' || t === 'product' || t === 'video') return 'bottom';
+  return 'middle';
+}
+
+const BAND_SPACE = {
+  top: 'Compose with the upper third calm and uncluttered — the page title sits there.',
+  middle: 'Compose with breathing room at the center — the page text sits there.',
+  bottom: 'Compose with the lower third calm and uncluttered — the page title sits there.',
+};
+
 function buildPrompt(story, slot) {
   const holder = slot.item || slot.card;
   const image = holder.image || {};
@@ -126,6 +143,8 @@ function buildPrompt(story, slot) {
     'Vertical 2:3 composition, cinematic natural light, ' +
     (/^[aeiou]/.test(mood) ? 'an ' : 'a ') + mood +
     '-leaning palette, quiet and evocative, photographic realism. ' +
+    BAND_SPACE[textBand(slot)] + ' ' +
+    (story.style ? 'Photographic style for the whole book: ' + story.style + '. ' : '') +
     'No text, no lettering, no borders, no watermarks.'
   );
 }

@@ -181,7 +181,7 @@
       return res.json();
     })
     .then(function (doc) {
-      var book = BookCompiler.compileBook(doc.story || {}, { height: BookRuntime.canvasHeight() });
+      var book = BookCompiler.compileBook(doc.story || {}, { height: BookRuntime.canvasHeight(), date: doc.createdAt });
       if (book.cards.length < 2) throw new Error('EMPTY');
       stateBox.hidden = true;
       player.loadBook(book);

@@ -116,6 +116,12 @@
         tag.textContent = node.lbl || 'image';
         ph.appendChild(tag);
         el.appendChild(ph);
+        /* tone-map the photograph toward the book's palette: a hue wash
+         * that only shows once a real image has loaded (see .img-tone) */
+        var tone = document.createElement('div');
+        tone.className = 'img-tone';
+        tone.style.background = 'hsl(' + h1 + ', 50%, 40%)';
+        el.appendChild(tone);
         /* slot key: how the composer's image fan-out finds this element */
         if (node.slot != null) el.setAttribute('data-slot', node.slot);
         attachImage(el, url);
@@ -220,7 +226,18 @@
       el = document.createElement('div');
       el.className = 'cmp cmp-end';
       applyCss(el, node.css);
+      /* the colophon: how a small press signs off */
+      var told = '';
+      if (ctx.date) {
+        var d = new Date(ctx.date);
+        if (!isNaN(d)) {
+          told = 'Told ' + ['January','February','March','April','May','June','July',
+            'August','September','October','November','December'][d.getMonth()] + ' ' + d.getFullYear();
+        }
+      }
       el.innerHTML = '<p>' + escapeHtml(ctx.bookName || '') + '</p>' +
+        '<div class="end-colophon">' + (told ? escapeHtml(told) + '<br>' : '') +
+        'Set in Fraunces</div>' +
         '<div class="end-wordmark">BOOK<b>.</b></div>';
       var rb = document.createElement('button');
       rb.className = 'replay'; rb.type = 'button'; rb.textContent = 'Replay';
@@ -319,7 +336,7 @@
       canvasH = w.height || 910;
       /* canvas + gallery-item heights follow the compiled book */
       screenEl.style.setProperty('--canvas-h', canvasH + 'px');
-      var ctx = { bookName: w.name, player: api };
+      var ctx = { bookName: w.name, date: w.date, player: api };
       (w.cards || []).forEach(function (cardNode, i) {
         var card = document.createElement('section');
         card.className = 'card';

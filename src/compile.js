@@ -27,6 +27,25 @@
   }
   function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
 
+  /* Typographic punctuation: curly quotes, em dashes, real ellipses —
+   * applied to every human-readable string before it reaches a page. */
+  function smarten(s) {
+    return String(s == null ? '' : s)
+      .replace(/---?/g, '\u2014')
+      .replace(/\.\.\./g, '\u2026')
+      .replace(/(^|[\s([{\u2014"])'/g, '$1\u2018')
+      .replace(/'/g, '\u2019')
+      .replace(/(^|[\s([{\u2014])"/g, '$1\u201C')
+      .replace(/"/g, '\u201D');
+  }
+
+  /* Editorial drop cap for left-set prose: the first letter, oversized. */
+  function dropCap(text) {
+    var m = /^([\u2018\u201C]?)([A-Za-z])([\s\S]*)$/.exec(text);
+    if (!m) return escapeHtml(text);
+    return escapeHtml(m[1]) + '<span class="dropcap">' + escapeHtml(m[2]) + '</span>' + escapeHtml(m[3]);
+  }
+
   var MONT = "'Montserrat', sans-serif", SLAB = "'Josefin Slab', Georgia, serif", OPEN = "'Open Sans', sans-serif";
   var FRAUNCES = "'Fraunces', Georgia, serif";
   var WHITE = 'rgba(253,254,255,1)';
@@ -88,7 +107,7 @@
     var k = [];
     var t = c.type;
     var slot = String(idx);
-    var title = c.title || '', body = c.body || '', kicker = c.kicker || '';
+    var title = smarten(c.title), body = smarten(c.body), kicker = smarten(c.kicker);
     var midShift = Math.round((H - 910) / 2);
     var botShift = H - 910;
     function mid(y) { return y + midShift; }
@@ -118,7 +137,7 @@
     if (t === 'quote') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
-      var lines = (c.lines || []).map(escapeHtml);
+      var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
       if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550 }, aOpts))));
@@ -133,7 +152,8 @@
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
       k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550 }, aOpts))));
-      k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
+      k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'product') {
@@ -183,10 +203,11 @@
     var k = [];
     k.push(img(FULL, it.image, slot));
     k.push({ t: 'gradation', css: FULL });
-    if (it.kicker) k.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
-    var isize = fitFont(it.title || '', RAMP.gtitle, 15);
-    k.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-    if (it.body) k.push(tb(escapeHtml(it.body), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    var ikicker = smarten(it.kicker), ititle = smarten(it.title), ibody = smarten(it.body);
+    if (ikicker) k.push(tb(escapeHtml(ikicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+    var isize = fitFont(ititle, RAMP.gtitle, 15);
+    k.push(tb(escapeHtml(ititle), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
+    if (ibody) k.push(tb(escapeHtml(ibody), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
     return { bg: inkBg(it.image), k: k };
   }
 
@@ -195,7 +216,7 @@
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
-    var out = { name: story.name || 'Untitled', height: H, cards: [] };
+    var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
       if (c.type === 'gallery') {

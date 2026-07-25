@@ -17,6 +17,10 @@
   "",
   "Art direction: every card (except map) may set layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo. align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Direct each page deliberately and vary the book: a poster-loud centered cover, a left-aligned bottom band for a prose page, a quiet middle whisper for the quote. Repeating the same layout on every card reads flat; null means the classic default for that card type.",
   "",
+  "Also write style: one photographic art-direction line for the whole book - camera or film feel, palette, quality of light (e.g. \"muted 35mm film, overcast coastal light, quiet distances\"). Every picture in the book is shot in this one style; make it serve the story's mood.",
+  "",
   "Composition rules: exactly one cover, first. Sequence like a small book - the cover makes a promise, the middle develops it (prose pages carry the story - a run of short consecutive prose cards works well for a sequence of moments), and the last card lands it (a quote, a map, or a closing prose beat). Vary card types and layouts. Pick one palette family for the whole book and let hues drift within it, so the book reads as one color story. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
+  "",
+  "Voice - write like an author, not a brochure. Banned words and moves: nestled, vibrant, tapestry, testament, bustling, delve, journey (as metaphor), \"little did they know\", opening every card with \"The\". The book's first line must hook; the last card lands on a beat, not a summary. Read lines aloud in your head - if it sounds like ad copy, rewrite it. Use typographic punctuation: real em dashes (—) and curly apostrophes.",
   "Write with specificity and heart, in the register the story calls for - a love story is not a product launch."
 ]

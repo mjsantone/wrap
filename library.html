@@ -100,6 +100,18 @@ html, body { overscroll-behavior: none; }
   object-fit: cover; opacity: 0; transition: opacity 0.6s ease;
 }
 .img-real.loaded { opacity: 1; }
+/* palette tone-map: rides above the photo, invisible until it loads */
+.img-tone {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  mix-blend-mode: color; opacity: 0; transition: opacity 0.8s ease;
+}
+.img-real { z-index: 1; }
+.cmp-image:has(.img-real.loaded) .img-tone { opacity: 0.24; }
+/* editorial drop cap on left-set prose */
+.dropcap {
+  float: left; font-family: 'Fraunces', Georgia, serif; font-weight: 550;
+  font-size: 3.05em; line-height: 0.82; padding: 0.04em 0.09em 0 0;
+}
 /* subtle loading state: the scene label breathes quietly on the solid tone */
 .img-ph span {
   font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.3em;
@@ -154,6 +166,11 @@ html, body { overscroll-behavior: none; }
 .cmp-widget:hover { background: rgba(255,90,54,0.35) !important; }
 .cmp-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .cmp-end p { color: #fff; font-weight: 200; font-size: 26px; margin: 5px 0; font-family: 'Open Sans', sans-serif; max-width: 85%; }
+.cmp-end .end-colophon {
+  font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: rgba(244,241,234,0.45); line-height: 2.1;
+  margin-bottom: 26px;
+}
 .cmp-end .end-wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 34px; letter-spacing: 0.04em; color: #fff; margin-top: 6px; }
 .cmp-end .end-wordmark b { color: var(--accent); }
 .cmp-end .replay {
@@ -347,7 +364,7 @@ html, body { overscroll-behavior: none; }
     </div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.6</span>
+      <span>Set in Fraunces · v0.0.7</span>
       <span><a href="./">Compose</a></span>
     </footer>
   </div>
@@ -472,6 +489,12 @@ html, body { overscroll-behavior: none; }
         tag.textContent = node.lbl || 'image';
         ph.appendChild(tag);
         el.appendChild(ph);
+        /* tone-map the photograph toward the book's palette: a hue wash
+         * that only shows once a real image has loaded (see .img-tone) */
+        var tone = document.createElement('div');
+        tone.className = 'img-tone';
+        tone.style.background = 'hsl(' + h1 + ', 50%, 40%)';
+        el.appendChild(tone);
         /* slot key: how the composer's image fan-out finds this element */
         if (node.slot != null) el.setAttribute('data-slot', node.slot);
         attachImage(el, url);
@@ -576,7 +599,18 @@ html, body { overscroll-behavior: none; }
       el = document.createElement('div');
       el.className = 'cmp cmp-end';
       applyCss(el, node.css);
+      /* the colophon: how a small press signs off */
+      var told = '';
+      if (ctx.date) {
+        var d = new Date(ctx.date);
+        if (!isNaN(d)) {
+          told = 'Told ' + ['January','February','March','April','May','June','July',
+            'August','September','October','November','December'][d.getMonth()] + ' ' + d.getFullYear();
+        }
+      }
       el.innerHTML = '<p>' + escapeHtml(ctx.bookName || '') + '</p>' +
+        '<div class="end-colophon">' + (told ? escapeHtml(told) + '<br>' : '') +
+        'Set in Fraunces</div>' +
         '<div class="end-wordmark">BOOK<b>.</b></div>';
       var rb = document.createElement('button');
       rb.className = 'replay'; rb.type = 'button'; rb.textContent = 'Replay';
@@ -675,7 +709,7 @@ html, body { overscroll-behavior: none; }
       canvasH = w.height || 910;
       /* canvas + gallery-item heights follow the compiled book */
       screenEl.style.setProperty('--canvas-h', canvasH + 'px');
-      var ctx = { bookName: w.name, player: api };
+      var ctx = { bookName: w.name, date: w.date, player: api };
       (w.cards || []).forEach(function (cardNode, i) {
         var card = document.createElement('section');
         card.className = 'card';
@@ -819,6 +853,25 @@ html, body { overscroll-behavior: none; }
   }
   function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
 
+  /* Typographic punctuation: curly quotes, em dashes, real ellipses —
+   * applied to every human-readable string before it reaches a page. */
+  function smarten(s) {
+    return String(s == null ? '' : s)
+      .replace(/---?/g, '\u2014')
+      .replace(/\.\.\./g, '\u2026')
+      .replace(/(^|[\s([{\u2014"])'/g, '$1\u2018')
+      .replace(/'/g, '\u2019')
+      .replace(/(^|[\s([{\u2014])"/g, '$1\u201C')
+      .replace(/"/g, '\u201D');
+  }
+
+  /* Editorial drop cap for left-set prose: the first letter, oversized. */
+  function dropCap(text) {
+    var m = /^([\u2018\u201C]?)([A-Za-z])([\s\S]*)$/.exec(text);
+    if (!m) return escapeHtml(text);
+    return escapeHtml(m[1]) + '<span class="dropcap">' + escapeHtml(m[2]) + '</span>' + escapeHtml(m[3]);
+  }
+
   var MONT = "'Montserrat', sans-serif", SLAB = "'Josefin Slab', Georgia, serif", OPEN = "'Open Sans', sans-serif";
   var FRAUNCES = "'Fraunces', Georgia, serif";
   var WHITE = 'rgba(253,254,255,1)';
@@ -880,7 +933,7 @@ html, body { overscroll-behavior: none; }
     var k = [];
     var t = c.type;
     var slot = String(idx);
-    var title = c.title || '', body = c.body || '', kicker = c.kicker || '';
+    var title = smarten(c.title), body = smarten(c.body), kicker = smarten(c.kicker);
     var midShift = Math.round((H - 910) / 2);
     var botShift = H - 910;
     function mid(y) { return y + midShift; }
@@ -910,7 +963,7 @@ html, body { overscroll-behavior: none; }
     if (t === 'quote') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
-      var lines = (c.lines || []).map(escapeHtml);
+      var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
       if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550 }, aOpts))));
@@ -925,7 +978,8 @@ html, body { overscroll-behavior: none; }
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
       k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550 }, aOpts))));
-      k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
+      k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'product') {
@@ -975,10 +1029,11 @@ html, body { overscroll-behavior: none; }
     var k = [];
     k.push(img(FULL, it.image, slot));
     k.push({ t: 'gradation', css: FULL });
-    if (it.kicker) k.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
-    var isize = fitFont(it.title || '', RAMP.gtitle, 15);
-    k.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-    if (it.body) k.push(tb(escapeHtml(it.body), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    var ikicker = smarten(it.kicker), ititle = smarten(it.title), ibody = smarten(it.body);
+    if (ikicker) k.push(tb(escapeHtml(ikicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+    var isize = fitFont(ititle, RAMP.gtitle, 15);
+    k.push(tb(escapeHtml(ititle), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
+    if (ibody) k.push(tb(escapeHtml(ibody), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
     return { bg: inkBg(it.image), k: k };
   }
 
@@ -987,7 +1042,7 @@ html, body { overscroll-behavior: none; }
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
-    var out = { name: story.name || 'Untitled', height: H, cards: [] };
+    var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
       if (c.type === 'gallery') {
@@ -1012,9 +1067,10 @@ html, body { overscroll-behavior: none; }
   /* The generation contract is shared with the server API — single source in api/src/contract/. */
   var STORY_SCHEMA = {
   "type": "object", "additionalProperties": false,
-  "required": ["name", "cards"],
+  "required": ["name", "style", "cards"],
   "properties": {
     "name": { "type": "string" },
+    "style": { "type": ["string", "null"] },
     "cards": {
       "type": "array",
       "items": {
@@ -1090,7 +1146,11 @@ html, body { overscroll-behavior: none; }
   "",
   "Art direction: every card (except map) may set layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo. align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Direct each page deliberately and vary the book: a poster-loud centered cover, a left-aligned bottom band for a prose page, a quiet middle whisper for the quote. Repeating the same layout on every card reads flat; null means the classic default for that card type.",
   "",
+  "Also write style: one photographic art-direction line for the whole book - camera or film feel, palette, quality of light (e.g. \"muted 35mm film, overcast coastal light, quiet distances\"). Every picture in the book is shot in this one style; make it serve the story's mood.",
+  "",
   "Composition rules: exactly one cover, first. Sequence like a small book - the cover makes a promise, the middle develops it (prose pages carry the story - a run of short consecutive prose cards works well for a sequence of moments), and the last card lands it (a quote, a map, or a closing prose beat). Vary card types and layouts. Pick one palette family for the whole book and let hues drift within it, so the book reads as one color story. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
+  "",
+  "Voice - write like an author, not a brochure. Banned words and moves: nestled, vibrant, tapestry, testament, bustling, delve, journey (as metaphor), \"little did they know\", opening every card with \"The\". The book's first line must hook; the last card lands on a beat, not a summary. Read lines aloud in your head - if it sounds like ad copy, rewrite it. Use typographic punctuation: real em dashes (—) and curly apostrophes.",
   "Write with specificity and heart, in the register the story calls for - a love story is not a product launch."
 ]
 ).join('\n');
