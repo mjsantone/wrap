@@ -321,6 +321,14 @@ html, body { overscroll-behavior: none; }
 
   /* phones: actions live in a pull-up sheet behind a ⋯ handle */
   @media (max-width: 640px), (hover: none) and (pointer: coarse) {
+    /* open sheet: the book recedes — scaled, dimmed, rounded like a card */
+    .card-container { transition: transform 0.28s ease, filter 0.28s ease, border-radius 0.28s ease; }
+    .screen.sheet-open .card-container {
+      transform: scale(0.93);
+      transform-origin: 50% 40%;
+      filter: brightness(0.5) saturate(0.9);
+      border-radius: 20px; overflow: hidden;
+    }
     .chrome {
       touch-action: none; /* we handle vertical drags — stop browser panning */
       display: flex; flex-direction: column; gap: 10px;
@@ -420,7 +428,7 @@ html, body { overscroll-behavior: none; }
     <div class="error-box" id="errorBox" hidden></div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.3</span>
+      <span>Set in Fraunces · v0.0.4</span>
       <span><a href="library.html">Library</a></span>
     </footer>
   </div>
@@ -1181,7 +1189,10 @@ html, body { overscroll-behavior: none; }
     pageBar: document.getElementById('pageBar'),
     tapLeft: document.getElementById('tapLeft'),
     tapRight: document.getElementById('tapRight'),
-    keyGate: function () { return !playerStage.hidden; },
+    keyGate: function () {
+      return !playerStage.hidden &&
+        !document.getElementById('chromeBar').classList.contains('open');
+    },
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
 
@@ -1246,14 +1257,39 @@ html, body { overscroll-behavior: none; }
   /* phone action sheet: the ⋯ handle pulls the actions up; using one closes it */
   var chromeBar = document.getElementById('chromeBar');
   var chromeToggleEl = document.getElementById('chromeToggle');
+  var screenNode = document.getElementById('screen');
+  function setSheet(open) {
+    chromeBar.classList.toggle('open', open);
+    /* the book pushes back and locks while the sheet is up */
+    screenNode.classList.toggle('sheet-open', open);
+  }
   var suppressToggleClick = false;
   chromeToggleEl.addEventListener('click', function () {
     if (suppressToggleClick) { suppressToggleClick = false; return; }
-    chromeBar.classList.toggle('open');
+    setSheet(!chromeBar.classList.contains('open'));
   });
   chromeBar.addEventListener('click', function (e) {
-    if (e.target.closest('button')) chromeBar.classList.remove('open');
+    if (e.target.closest('button')) setSheet(false);
   });
+
+  /* the dimmed book is a scrim: any touch on it — tap or sideways swipe —
+   * dismisses the sheet instead of flipping pages */
+  var scrimDismissed = false;
+  screenNode.addEventListener('pointerdown', function (e) {
+    scrimDismissed = false;
+    if (!chromeBar.classList.contains('open')) return;
+    if (e.target.closest('.chrome') || e.target.closest('.chrome-toggle')) return;
+    setSheet(false);
+    scrimDismissed = true;
+    e.stopPropagation(); /* the player never sees it — no flip, no drag */
+  }, true);
+  screenNode.addEventListener('click', function (e) {
+    if (scrimDismissed) {
+      scrimDismissed = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 
   /* swipe: drag the open sheet down to dismiss; flick up on ⋯ to open */
   var sheetDrag = null;
@@ -1278,7 +1314,7 @@ html, body { overscroll-behavior: none; }
     var dy = e.clientY - sheetDrag.y;
     chromeBar.style.transition = '';
     chromeBar.style.transform = '';
-    if (sheetDrag.moved && dy > 55) chromeBar.classList.remove('open');
+    if (sheetDrag.moved && dy > 55) setSheet(false);
     sheetDrag = null;
   }
   chromeBar.addEventListener('pointerup', endSheetDrag);
@@ -1292,7 +1328,7 @@ html, body { overscroll-behavior: none; }
   });
   chromeToggleEl.addEventListener('pointermove', function (e) {
     if (toggleFlick != null && toggleFlick - e.clientY > 18) {
-      chromeBar.classList.add('open');
+      setSheet(true);
       toggleFlick = null;
       suppressToggleClick = true; /* the captured release also fires click */
     }
