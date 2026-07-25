@@ -269,13 +269,14 @@ html, body { overscroll-behavior: none; }
   .hero h1 {
     font-family: 'Fraunces', Georgia, serif; font-weight: 550;
     font-size: clamp(54px, 10vw, 112px); line-height: 0.98; letter-spacing: -0.015em;
+    text-wrap: balance;
     margin: 0 0 24px;
   }
   .hero h1 em { font-style: italic; font-weight: 460; }
   .hero h1 b { color: var(--accent); font-weight: inherit; font-style: normal; }
   .lede {
     font-size: 17px; line-height: 1.65; color: rgba(244,241,234,0.7);
-    max-width: 52ch; margin: 0;
+    max-width: 52ch; margin: 0; text-wrap: pretty;
   }
 
   .prompt-box { margin-top: 36px; }
@@ -464,7 +465,7 @@ html, body { overscroll-behavior: none; }
     <div class="error-box" id="errorBox" hidden></div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.9</span>
+      <span>Set in Fraunces · v0.0.10</span>
       <span><a href="library.html">Library</a></span>
     </footer>
   </div>
@@ -1053,6 +1054,9 @@ html, body { overscroll-behavior: none; }
     if (opts.weight) css['font-weight'] = String(opts.weight);
     if (opts.ls) css['letter-spacing'] = opts.ls;
     if (opts.caps) css['text-transform'] = 'uppercase';
+    /* modern text wrapping: balance kills one-word second lines on
+     * titles; pretty kills widows in reading text (older browsers ignore) */
+    if (opts.wrap) css['text-wrap'] = opts.wrap;
     return css;
   }
   function ext(a, b) {
@@ -1105,7 +1109,7 @@ html, body { overscroll-behavior: none; }
       var dsize = Math.round(RAMP.display * scaleMul);
       var tsize = fitFont(title, dsize, 12);
       var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
-      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts))));
       if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
@@ -1115,9 +1119,9 @@ html, body { overscroll-behavior: none; }
       var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
-      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550 }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55 }, aOpts))));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'prose') {
@@ -1126,9 +1130,9 @@ html, body { overscroll-behavior: none; }
       var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
-        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'product') {
@@ -1137,9 +1141,9 @@ html, body { overscroll-behavior: none; }
       var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
       var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
       var pbody = escapeHtml(body) + (c.price ? ' <b>' + escapeHtml(c.price) + '</b>' : '');
-      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
+      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
       if (c.button) {
         k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
           position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
@@ -1155,13 +1159,13 @@ html, body { overscroll-behavior: none; }
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
-      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
-      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
+      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
-      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550 })));
+      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' })));
       return { bg: '#161718', k: k };
     }
     return null;
@@ -1181,8 +1185,8 @@ html, body { overscroll-behavior: none; }
     var ikicker = smarten(it.kicker), ititle = smarten(it.title), ibody = smarten(it.body);
     if (ikicker) k.push(tb(escapeHtml(ikicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
     var isize = fitFont(ititle, RAMP.gtitle, 15);
-    k.push(tb(escapeHtml(ititle), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-    if (ibody) k.push(tb(escapeHtml(ibody), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    k.push(tb(escapeHtml(ititle), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550, wrap: 'balance' })));
+    if (ibody) k.push(tb(escapeHtml(ibody), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4, wrap: 'pretty' })));
     return { bg: inkBg(it.image), k: k };
   }
 
