@@ -50,13 +50,20 @@ function providerConfig(env) {
   return null;
 }
 
+/* Quality is a latency budget, not just a fidelity knob: the SWA platform
+ * severs responses at ~45s, and gpt-image-1 at this size typically runs
+ * ~5–15s on low, ~30–70s on medium, 60s+ on high. Only low fits the cap
+ * dependably, so interiors default there; the cover (the book's face)
+ * gambles on medium — a timeout isn't fatal because every open of the
+ * book retries missing slots. Raise IMAGE_QUALITY/IMAGE_QUALITY_COVER
+ * only on hosting without the cap. */
 function requestBody(cfg, prompt, env, quality) {
   env = env || process.env;
   const body = {
     prompt,
     n: 1,
     size: IMAGE_SIZE,
-    quality: quality || env.IMAGE_QUALITY || 'medium',
+    quality: quality || env.IMAGE_QUALITY || 'low',
     output_format: 'webp',
     output_compression: 80,
   };
@@ -168,7 +175,7 @@ async function generateImage(prompt, deps) {
       method: 'POST',
       headers: cfg.headers,
       body: JSON.stringify(requestBody(cfg, prompt, env, deps && deps.quality)),
-      signal: AbortSignal.timeout(Number(env.IMAGE_TIMEOUT_MS || 40000)),
+      signal: AbortSignal.timeout(Number(env.IMAGE_TIMEOUT_MS || 42000)),
     });
   } catch (err) {
     if (err && (err.name === 'TimeoutError' || err.name === 'AbortError')) {

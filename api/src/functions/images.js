@@ -73,8 +73,10 @@ app.http('books-images', {
     let result;
     try {
       /* the cover is the book's face — library tiles, link previews —
-       * so it renders a quality step above the interior pages */
-      const quality = slot.key === '0' ? (process.env.IMAGE_QUALITY_COVER || 'high') : undefined;
+       * so it renders a quality step above the interior pages (medium,
+       * not high: high rarely finishes inside the platform's ~45s
+       * response cap — see lib/images.js on the latency budget) */
+      const quality = slot.key === '0' ? (process.env.IMAGE_QUALITY_COVER || 'medium') : undefined;
       result = await images.generateImage(images.buildPrompt(resource.story, slot), { quality });
     } catch (err) {
       if (err.code === 'NOT_CONFIGURED') return json(503, { error: 'NOT_CONFIGURED' });

@@ -473,6 +473,7 @@
   }
 
   async function fanOutImages(id, slots) {
+    var landed = 0, firstErr = null;
     for (var i = 0; i < (slots || []).length; i++) {
       if (lastShareId !== id) return; // a newer share took over
       var res;
@@ -487,17 +488,29 @@
         });
       } catch (e) { setImageNote(null); return; }
       if (res.status === 503 || res.status === 429) { setImageNote(null); return; }
-      if (!res.ok) continue; // one bad slot shouldn't stop the rest
+      if (!res.ok) { // one bad slot shouldn't stop the rest — but remember why
+        if (!firstErr) {
+          try { firstErr = (await res.json() || {}).error; } catch (e) {}
+          firstErr = firstErr || 'HTTP ' + res.status;
+        }
+        continue;
+      }
       var d = null;
       try { d = await res.json(); } catch (e) { continue; }
       if (!d || !d.url) continue;
+      landed += 1;
       applyImageUrl(lastStory, d.slot, d.url);
       Array.prototype.forEach.call(
         document.querySelectorAll('[data-slot="' + d.slot + '"]'),
         function (el) { BookRuntime.attachImage(el, d.url); }
       );
     }
-    setImageNote('The pictures are in.');
+    /* say what actually happened — a book of placeholders must not be
+     * told the pictures are in (missing slots retry whenever the shared
+     * link is opened, so a stumble here isn't final) */
+    if (landed === (slots || []).length) setImageNote('The pictures are in.');
+    else if (landed) setImageNote('Some pictures didn’t finish — opening the book link retries them.');
+    else setImageNote('The pictures didn’t paint' + (firstErr ? ' (' + firstErr + ')' : '') + ' — opening the book link retries them.');
   }
 
   /* Publish the shared book into the public gallery feed. */
