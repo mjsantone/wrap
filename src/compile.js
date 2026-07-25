@@ -70,12 +70,12 @@
     var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
 
     if (t === 'cover') {
-      k.push(img({ position: 'absolute', top: '30px', left: '30px', width: '580px', height: (H - 55) + 'px' }, c.image, slot));
-      k.push({ t: 'gradation', css: { position: 'absolute', top: '61px', left: '31px', width: '579px', height: (H - 87) + 'px' } });
+      k.push(img(FULL, c.image, slot));
+      k.push({ t: 'gradation', css: FULL });
       var tsize = fitFont(title, 80, 12);
       k.push(tb(escapeHtml(title), center(bot(590) + (80 - tsize), tsize, MONT, { left: 31, width: 580, lh: 1.02 })));
       if (kicker) k.push(tb(escapeHtml(kicker), center(bot(700), fitFont(kicker, 40, 26), SLAB, { left: 30, width: 580 })));
-      return { bg: '#fff', k: k };
+      return { bg: inkBg(c.image), k: k };
     }
     if (t === 'quote') {
       k.push(img(FULL, c.image, slot));
@@ -101,15 +101,15 @@
     if (t === 'gallery') {
       var items = (c.items || []).slice(0, 5).map(function (it, j) {
         var ik = [];
-        ik.push(img({ position: 'absolute', top: '10px', left: '10px', width: '620px', height: (H - 20) + 'px' }, it.image, slot + '.' + j));
-        ik.push({ t: 'gradation', css: { position: 'absolute', top: '19px', left: '12px', width: '616px', height: (H - 34) + 'px' } });
+        ik.push(img(FULL, it.image, slot + '.' + j));
+        ik.push({ t: 'gradation', css: FULL });
         if (it.kicker) ik.push(tb(escapeHtml(it.kicker), center(bot(555), fitFont(it.kicker, 38, 26), SLAB, { left: 30, width: 580 })));
         var isize = fitFont(it.title || '', 60, 15);
         ik.push(tb(escapeHtml(it.title || ''), center(bot(615) + (60 - isize), isize, MONT)));
         ik.push(tb(escapeHtml(it.body || ''), center(bot(700), 26, SLAB, { left: 45, width: 550, lh: 1.35 })));
         return { k: ik };
       });
-      return { bg: '#fff', k: [{ t: 'gallery', k: items }] };
+      return { bg: inkBg(c.items && c.items[0] && c.items[0].image), k: [{ t: 'gallery', k: items }] };
     }
     if (t === 'product') {
       k.push(img(FULL, c.image, slot));
