@@ -96,6 +96,39 @@
     return 'hsl(' + num(image && image.h1, 220) + ', 30%, 10%)';
   }
 
+  /* ---------- seeded default art direction ----------
+   * When the model leaves a card undirected (layout null), the default
+   * still varies: a stable hash of the book's name walks a short set of
+   * editorial recipes, stepping so consecutive undirected cards never
+   * land on the same one. The same book always compiles the same way —
+   * variety without randomness — and a directed card is never overridden. */
+  var UNDIRECTED = {
+    prose: [
+      {},                                 /* the classic: middle, centered */
+      { band: 'bottom', align: 'left' },
+      { band: 'top', align: 'left' },
+      { band: 'top' },
+      { band: 'bottom' },
+      { band: 'middle', align: 'left' }
+    ],
+    quote: [
+      {},                                 /* the classic: middle, centered */
+      { band: 'top' },
+      { band: 'bottom', align: 'left' }
+    ]
+  };
+  function seedOf(s) {
+    var h = 0; s = String(s || '');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+  function defaultLayout(t, seed, idx) {
+    var recipes = UNDIRECTED[t];
+    if (!recipes) return {};
+    var step = 1 + seed % (recipes.length - 1); /* never 0 mod length: neighbors always differ */
+    return recipes[(seed + idx * step) % recipes.length];
+  }
+
   /* ---------- the adaptive canvas + model art direction ----------
    * Layouts are anchored bands, not fixed coordinates. The logical canvas
    * is 640 wide and H tall (910 classic, up to 1390 on a tall phone).
@@ -106,7 +139,7 @@
    * band picks which anchor the text cluster hangs from, align switches
    * the column, scale steps the title along the ramp. Null means the
    * classic default for that card type. */
-  function compileCard(c, H, idx) {
+  function compileCard(c, H, idx, seed) {
     var k = [];
     var t = c.type;
     var slot = String(idx);
@@ -118,6 +151,7 @@
     var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
 
     var L = c.layout || {};
+    if (L.band == null && L.align == null && L.scale == null) L = defaultLayout(t, seed, idx);
     var scaleMul = L.scale === 'loud' ? 1.2 : L.scale === 'quiet' ? 0.82 : 1;
     var aOpts = L.align === 'left' ? { align: 'left', left: 44, width: 552 } : {};
     /* bands: designed-at-910 cluster origins per band; d = the default band */
@@ -219,6 +253,7 @@
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
+    var seed = seedOf(story.name);
     var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
@@ -228,7 +263,7 @@
         });
         return;
       }
-      var compiled = compileCard(c, H, i);
+      var compiled = compileCard(c, H, i, seed);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended

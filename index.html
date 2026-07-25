@@ -460,7 +460,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.13</span>
+      <span>v0.0.14</span>
     </footer>
   </div>
 </div>
@@ -1096,6 +1096,39 @@ html, body { overscroll-behavior: none; }
     return 'hsl(' + num(image && image.h1, 220) + ', 30%, 10%)';
   }
 
+  /* ---------- seeded default art direction ----------
+   * When the model leaves a card undirected (layout null), the default
+   * still varies: a stable hash of the book's name walks a short set of
+   * editorial recipes, stepping so consecutive undirected cards never
+   * land on the same one. The same book always compiles the same way —
+   * variety without randomness — and a directed card is never overridden. */
+  var UNDIRECTED = {
+    prose: [
+      {},                                 /* the classic: middle, centered */
+      { band: 'bottom', align: 'left' },
+      { band: 'top', align: 'left' },
+      { band: 'top' },
+      { band: 'bottom' },
+      { band: 'middle', align: 'left' }
+    ],
+    quote: [
+      {},                                 /* the classic: middle, centered */
+      { band: 'top' },
+      { band: 'bottom', align: 'left' }
+    ]
+  };
+  function seedOf(s) {
+    var h = 0; s = String(s || '');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h;
+  }
+  function defaultLayout(t, seed, idx) {
+    var recipes = UNDIRECTED[t];
+    if (!recipes) return {};
+    var step = 1 + seed % (recipes.length - 1); /* never 0 mod length: neighbors always differ */
+    return recipes[(seed + idx * step) % recipes.length];
+  }
+
   /* ---------- the adaptive canvas + model art direction ----------
    * Layouts are anchored bands, not fixed coordinates. The logical canvas
    * is 640 wide and H tall (910 classic, up to 1390 on a tall phone).
@@ -1106,7 +1139,7 @@ html, body { overscroll-behavior: none; }
    * band picks which anchor the text cluster hangs from, align switches
    * the column, scale steps the title along the ramp. Null means the
    * classic default for that card type. */
-  function compileCard(c, H, idx) {
+  function compileCard(c, H, idx, seed) {
     var k = [];
     var t = c.type;
     var slot = String(idx);
@@ -1118,6 +1151,7 @@ html, body { overscroll-behavior: none; }
     var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
 
     var L = c.layout || {};
+    if (L.band == null && L.align == null && L.scale == null) L = defaultLayout(t, seed, idx);
     var scaleMul = L.scale === 'loud' ? 1.2 : L.scale === 'quiet' ? 0.82 : 1;
     var aOpts = L.align === 'left' ? { align: 'left', left: 44, width: 552 } : {};
     /* bands: designed-at-910 cluster origins per band; d = the default band */
@@ -1219,6 +1253,7 @@ html, body { overscroll-behavior: none; }
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
+    var seed = seedOf(story.name);
     var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
@@ -1228,7 +1263,7 @@ html, body { overscroll-behavior: none; }
         });
         return;
       }
-      var compiled = compileCard(c, H, i);
+      var compiled = compileCard(c, H, i, seed);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended
@@ -1321,7 +1356,7 @@ html, body { overscroll-behavior: none; }
   "",
   "Every card and gallery item needs an image. Its label is the brief a photographer would shoot from: 4-8 concrete words naming subject, setting, and light or time of day (e.g. \"weathered lighthouse on a cliff at dusk\", \"flour-dusted hands shaping dough, morning window light\"). Photographable things only - no abstractions, no emotions as subjects, no readable text or signage, no real people's names or likenesses. h1 and h2 are HSL hues 0-359 evoking the scene (the renderer shows a solid ink tone in that hue until the photo arrives - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340).",
   "",
-  "Art direction: every card (except map) may set layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo. align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Direct each page deliberately and vary the book: a poster-loud centered cover, a left-aligned bottom band for a prose page, a quiet middle whisper for the quote. Repeating the same layout on every card reads flat; null means the classic default for that card type.",
+  "Art direction: every card (except map) sets layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo (write the image label so its calm negative space falls in that band). align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Let the copy motivate the choice: a short declarative line earns loud; a long or tender passage sets quiet or standard, left-aligned, top or bottom; a held-breath moment sits middle center. Rhythm rules for the whole book: direct every card explicitly rather than leaving layout null; no two consecutive cards may repeat the same band+align pair; use at least two different bands and at least one left-aligned page; at most one loud page besides the cover. A well-varied six-card book might run: cover bottom/center/loud → prose top/left/standard → prose bottom/left/quiet → quote middle/center/quiet → product bottom/center/standard → map.",
   "",
   "Also write style: one photographic art-direction line for the whole book - camera or film feel, palette, quality of light (e.g. \"muted 35mm film, overcast coastal light, quiet distances\"). Every picture in the book is shot in this one style; make it serve the story's mood.",
   "",
