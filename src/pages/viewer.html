@@ -157,16 +157,29 @@
     );
   }
 
+  /* The long-call host (see composer): image generation without SWA's
+   * ~45s response cap; same-origin remains the fallback. */
+  var LONG_API = '@LONGAPI@';
+  async function apiFetch(path, opts) {
+    if (LONG_API) {
+      try {
+        var r = await fetch(LONG_API + path, opts);
+        if (r.status !== 404) return r;
+      } catch (e) {}
+    }
+    return fetch(path, opts);
+  }
+
   /* Actively finish the book: request each missing picture, one at a
-   * time (mirrors the composer's fan-out — sequential stays under the
-   * API's response cap). 503/429 means no provider or no budget — stop
-   * and leave the rest to the polling net. */
+   * time (mirrors the composer's fan-out — sequential keeps each call
+   * inside its host's response budget). 503/429 means no provider or no
+   * budget — stop and leave the rest to the polling net. */
   async function fanOutImages(missing) {
     var netFails = 0;
     for (var i = 0; i < missing.length; i++) {
       var res;
       try {
-        res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
+        res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slot: missing[i] }),

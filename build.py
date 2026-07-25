@@ -49,6 +49,11 @@ def build_page(src: str) -> str:
     # site says which build it is.
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     text = text.replace("@BOOKVERSION@", version)
+    # The long-call API host (LONG_API file at the repo root): a standalone
+    # Azure Functions app without SWA's ~45s response cap, used for image
+    # and story generation. Empty file = same-origin only.
+    long_api = (ROOT / "LONG_API").read_text(encoding="utf-8").strip() if (ROOT / "LONG_API").is_file() else ""
+    text = text.replace("@LONGAPI@", long_api.rstrip("/"))
     return HEADER.format(src=src) + text
 
 
