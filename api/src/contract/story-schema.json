@@ -1,8 +1,9 @@
 {
   "type": "object", "additionalProperties": false,
-  "required": ["name", "cards"],
+  "required": ["name", "style", "cards"],
   "properties": {
     "name": { "type": "string" },
+    "style": { "type": ["string", "null"] },
     "cards": {
       "type": "array",
       "items": {

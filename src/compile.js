@@ -27,6 +27,25 @@
   }
   function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
 
+  /* Typographic punctuation: curly quotes, em dashes, real ellipses —
+   * applied to every human-readable string before it reaches a page. */
+  function smarten(s) {
+    return String(s == null ? '' : s)
+      .replace(/---?/g, '\u2014')
+      .replace(/\.\.\./g, '\u2026')
+      .replace(/(^|[\s([{\u2014"])'/g, '$1\u2018')
+      .replace(/'/g, '\u2019')
+      .replace(/(^|[\s([{\u2014])"/g, '$1\u201C')
+      .replace(/"/g, '\u201D');
+  }
+
+  /* Editorial drop cap for left-set prose: the first letter, oversized. */
+  function dropCap(text) {
+    var m = /^([\u2018\u201C]?)([A-Za-z])([\s\S]*)$/.exec(text);
+    if (!m) return escapeHtml(text);
+    return escapeHtml(m[1]) + '<span class="dropcap">' + escapeHtml(m[2]) + '</span>' + escapeHtml(m[3]);
+  }
+
   var MONT = "'Montserrat', sans-serif", SLAB = "'Josefin Slab', Georgia, serif", OPEN = "'Open Sans', sans-serif";
   var FRAUNCES = "'Fraunces', Georgia, serif";
   var WHITE = 'rgba(253,254,255,1)';
@@ -59,6 +78,9 @@
     if (opts.weight) css['font-weight'] = String(opts.weight);
     if (opts.ls) css['letter-spacing'] = opts.ls;
     if (opts.caps) css['text-transform'] = 'uppercase';
+    /* modern text wrapping: balance kills one-word second lines on
+     * titles; pretty kills widows in reading text (older browsers ignore) */
+    if (opts.wrap) css['text-wrap'] = opts.wrap;
     return css;
   }
   function ext(a, b) {
@@ -88,7 +110,7 @@
     var k = [];
     var t = c.type;
     var slot = String(idx);
-    var title = c.title || '', body = c.body || '', kicker = c.kicker || '';
+    var title = smarten(c.title), body = smarten(c.body), kicker = smarten(c.kicker);
     var midShift = Math.round((H - 910) / 2);
     var botShift = H - 910;
     function mid(y) { return y + midShift; }
@@ -111,19 +133,19 @@
       var dsize = Math.round(RAMP.display * scaleMul);
       var tsize = fitFont(title, dsize, 12);
       var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
-      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts))));
       if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'quote') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
-      var lines = (c.lines || []).map(escapeHtml);
+      var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
-      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550 }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55 }, aOpts))));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'prose') {
@@ -132,8 +154,9 @@
       var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550 }, aOpts))));
-      k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts))));
+      k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'product') {
@@ -142,9 +165,9 @@
       var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
       var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
       var pbody = escapeHtml(body) + (c.price ? ' <b>' + escapeHtml(c.price) + '</b>' : '');
-      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
+      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
       if (c.button) {
         k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
           position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
@@ -160,13 +183,13 @@
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
-      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
-      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
+      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
-      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550 })));
+      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' })));
       return { bg: '#161718', k: k };
     }
     return null;
@@ -183,10 +206,11 @@
     var k = [];
     k.push(img(FULL, it.image, slot));
     k.push({ t: 'gradation', css: FULL });
-    if (it.kicker) k.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
-    var isize = fitFont(it.title || '', RAMP.gtitle, 15);
-    k.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-    if (it.body) k.push(tb(escapeHtml(it.body), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    var ikicker = smarten(it.kicker), ititle = smarten(it.title), ibody = smarten(it.body);
+    if (ikicker) k.push(tb(escapeHtml(ikicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+    var isize = fitFont(ititle, RAMP.gtitle, 15);
+    k.push(tb(escapeHtml(ititle), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550, wrap: 'balance' })));
+    if (ibody) k.push(tb(escapeHtml(ibody), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4, wrap: 'pretty' })));
     return { bg: inkBg(it.image), k: k };
   }
 
@@ -195,7 +219,7 @@
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
-    var out = { name: story.name || 'Untitled', height: H, cards: [] };
+    var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
       if (c.type === 'gallery') {

@@ -52,6 +52,21 @@ test('buildPrompt uses the slot label, book title, hue mood, and forbids text', 
   assert.match(p, /2:3/);
 });
 
+test('buildPrompt carries the book style line and the text band', () => {
+  const styled = JSON.parse(JSON.stringify(STORY));
+  styled.style = 'muted 35mm film, overcast coastal light';
+  // cover defaults to a bottom text band
+  const cover = images.buildPrompt(styled, images.findSlot(styled, '0'));
+  assert.match(cover, /Photographic style for the whole book: muted 35mm film/);
+  assert.match(cover, /lower third calm/);
+  // prose defaults to the middle band; an explicit layout overrides
+  styled.cards[1].layout = { band: 'top', align: null, scale: null };
+  const prose = images.buildPrompt(styled, images.findSlot(styled, '1'));
+  assert.match(prose, /upper third calm/);
+  // gallery moments read as bottom-band pages
+  assert.match(images.buildPrompt(styled, images.findSlot(styled, '2.1')), /lower third calm/);
+});
+
 test('providerConfig picks Azure over OpenAI, and null when neither', () => {
   const azure = images.providerConfig({
     AZURE_OPENAI_ENDPOINT: 'https://res.openai.azure.com/',
@@ -126,6 +141,20 @@ test('generateImage error mapping: not configured / 429 / content policy / empty
     images.generateImage('x', { env, fetch: fetchStub(200, { data: [] }) }),
     (e) => e.code === 'UPSTREAM'
   );
+});
+
+test('generateImage lets the caller raise quality (cover tier)', async () => {
+  const env = { OPENAI_API_KEY: 'sk-x' };
+  await images.generateImage('cover scene', {
+    env, quality: 'high',
+    fetch: fetchStub(200, { data: [{ b64_json: 'eA==' }] }),
+  });
+  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'high');
+  await images.generateImage('interior scene', {
+    env,
+    fetch: fetchStub(200, { data: [{ b64_json: 'eA==' }] }),
+  });
+  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'medium');
 });
 
 test('generateImage maps an aborted request to TIMEOUT', async () => {

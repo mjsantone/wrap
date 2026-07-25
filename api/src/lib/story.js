@@ -20,6 +20,7 @@ const MAX_QUOTE_LINES = 16;
 
 const LIMITS = {
   name: 120,
+  style: 200,
   kicker: 120,
   title: 160,
   body: 1000,
@@ -128,7 +129,7 @@ function validateStory(input) {
     cards.push(card);
   }
 
-  const story = { name, cards };
+  const story = { name, style: str(input.style, LIMITS.style), cards };
   if (Buffer.byteLength(JSON.stringify(story), 'utf8') > MAX_BODY_BYTES) {
     return { ok: false, error: `story exceeds ${MAX_BODY_BYTES} bytes` };
   }

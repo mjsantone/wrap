@@ -50,13 +50,13 @@ function providerConfig(env) {
   return null;
 }
 
-function requestBody(cfg, prompt, env) {
+function requestBody(cfg, prompt, env, quality) {
   env = env || process.env;
   const body = {
     prompt,
     n: 1,
     size: IMAGE_SIZE,
-    quality: env.IMAGE_QUALITY || 'medium',
+    quality: quality || env.IMAGE_QUALITY || 'medium',
     output_format: 'webp',
     output_compression: 80,
   };
@@ -115,6 +115,23 @@ function hueName(h) {
   return 'crimson';
 }
 
+/* Which band the page's text sits on — mirrors the compiler's defaults —
+ * so the photograph is composed with calm negative space under the type. */
+function textBand(slot) {
+  if (slot.item) return 'bottom'; // legacy gallery moments
+  const L = slot.card.layout || {};
+  if (L.band === 'top' || L.band === 'middle' || L.band === 'bottom') return L.band;
+  const t = slot.card.type;
+  if (t === 'cover' || t === 'product' || t === 'video') return 'bottom';
+  return 'middle';
+}
+
+const BAND_SPACE = {
+  top: 'Compose with the upper third calm and uncluttered — the page title sits there.',
+  middle: 'Compose with breathing room at the center — the page text sits there.',
+  bottom: 'Compose with the lower third calm and uncluttered — the page title sits there.',
+};
+
 function buildPrompt(story, slot) {
   const holder = slot.item || slot.card;
   const image = holder.image || {};
@@ -126,13 +143,16 @@ function buildPrompt(story, slot) {
     'Vertical 2:3 composition, cinematic natural light, ' +
     (/^[aeiou]/.test(mood) ? 'an ' : 'a ') + mood +
     '-leaning palette, quiet and evocative, photographic realism. ' +
+    BAND_SPACE[textBand(slot)] + ' ' +
+    (story.style ? 'Photographic style for the whole book: ' + story.style + '. ' : '') +
     'No text, no lettering, no borders, no watermarks.'
   );
 }
 
 /* ---------- generation ---------- */
 
-/* deps (tests): { env, fetch }. Resolves { data: base64, contentType }. */
+/* deps: { env, fetch, quality } — quality lets the cover render a step
+ * above the interior pages. Resolves { data: base64, contentType }. */
 async function generateImage(prompt, deps) {
   const env = (deps && deps.env) || process.env;
   const cfg = providerConfig(env);
@@ -147,7 +167,7 @@ async function generateImage(prompt, deps) {
     res = await doFetch(cfg.url, {
       method: 'POST',
       headers: cfg.headers,
-      body: JSON.stringify(requestBody(cfg, prompt, env)),
+      body: JSON.stringify(requestBody(cfg, prompt, env, deps && deps.quality)),
       signal: AbortSignal.timeout(Number(env.IMAGE_TIMEOUT_MS || 40000)),
     });
   } catch (err) {

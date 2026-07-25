@@ -45,13 +45,14 @@
   .hero h1 {
     font-family: 'Fraunces', Georgia, serif; font-weight: 550;
     font-size: clamp(54px, 10vw, 112px); line-height: 0.98; letter-spacing: -0.015em;
+    text-wrap: balance;
     margin: 0 0 24px;
   }
   .hero h1 em { font-style: italic; font-weight: 460; }
   .hero h1 b { color: var(--accent); font-weight: inherit; font-style: normal; }
   .lede {
     font-size: 17px; line-height: 1.65; color: rgba(244,241,234,0.7);
-    max-width: 52ch; margin: 0;
+    max-width: 52ch; margin: 0; text-wrap: pretty;
   }
 
   .prompt-box { margin-top: 36px; }
@@ -341,7 +342,7 @@
   }
   function showPlayer(story) {
     try {
-      var book = BookCompiler.compileBook(story, { height: BookRuntime.canvasHeight() });
+      var book = BookCompiler.compileBook(story, { height: BookRuntime.canvasHeight(), date: new Date().toISOString() });
       if (book.cards.length < 2) throw new Error('Empty book');
       homeView.classList.add('hidden');
       playerStage.hidden = false;

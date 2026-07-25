@@ -57,13 +57,19 @@ def main() -> None:
     stale = []
     for src, dest in PAGES.items():
         built = build_page(src)
-        out = ROOT / dest
-        if check:
-            if not out.is_file() or out.read_text(encoding="utf-8") != built:
-                stale.append(dest)
-        else:
-            out.write_text(built, encoding="utf-8")
-            print(f"{dest}  ({len(built):,} bytes)  <-  {src}")
+        outs = [ROOT / dest]
+        if dest == "b.html":
+            # the share-preview Function serves the viewer shell with OG
+            # tags injected — it needs its own copy inside the API package
+            outs.append(ROOT / "api" / "static" / "b.html")
+        for out in outs:
+            if check:
+                if not out.is_file() or out.read_text(encoding="utf-8") != built:
+                    stale.append(str(out.relative_to(ROOT)))
+            else:
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(built, encoding="utf-8")
+                print(f"{out.relative_to(ROOT)}  ({len(built):,} bytes)  <-  {src}")
     if stale:
         sys.exit(
             "stale build outputs: " + ", ".join(stale)
