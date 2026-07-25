@@ -35,6 +35,7 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; background: #000; }
+html, body { overscroll-behavior: none; }
 
 .player-stage {
   position: fixed; inset: 0; margin: 0; background: #000;
@@ -262,7 +263,7 @@ body { margin: 0; background: #000; }
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
-      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.2</p>
+      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.3</p>
     </div>
   </div>
 </div>
@@ -632,7 +633,7 @@ body { margin: 0; background: #000; }
     /* live drag flip around the left spine */
     var drag = null;
     screenEl.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('button') || e.target.closest('a')) return;
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.chrome')) return;
       if (opts.dragGate && !opts.dragGate()) return;
       drag = { x: e.clientX, y: e.clientY, mode: null, card: null, fwd: true, dx: 0 };
     });
