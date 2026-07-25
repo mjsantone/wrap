@@ -136,19 +136,6 @@
       k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
-    if (t === 'gallery') {
-      var items = (c.items || []).slice(0, 5).map(function (it, j) {
-        var ik = [];
-        ik.push(img(FULL, it.image, slot + '.' + j));
-        ik.push({ t: 'gradation', css: FULL });
-        if (it.kicker) ik.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
-        var isize = fitFont(it.title || '', RAMP.gtitle, 15);
-        ik.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-        ik.push(tb(escapeHtml(it.body || ''), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
-        return { k: ik };
-      });
-      return { bg: inkBg(c.items && c.items[0] && c.items[0].image), k: [{ t: 'gallery', k: items }] };
-    }
     if (t === 'product') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'gradation', css: FULL });
@@ -185,6 +172,24 @@
     return null;
   }
 
+  /* Vertical scrolling is retired: a stored gallery card flattens into
+   * one flip card per moment, keeping the whole book on the horizontal
+   * axis. Slot keys stay "i.j" so stored image urls and the fan-out
+   * still land on the right page. */
+  function compileItemCard(it, H, slot) {
+    var botShift = H - 910;
+    function bot(y) { return y + botShift; }
+    var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
+    var k = [];
+    k.push(img(FULL, it.image, slot));
+    k.push({ t: 'gradation', css: FULL });
+    if (it.kicker) k.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+    var isize = fitFont(it.title || '', RAMP.gtitle, 15);
+    k.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
+    if (it.body) k.push(tb(escapeHtml(it.body), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    return { bg: inkBg(it.image), k: k };
+  }
+
   /* opts.height: the logical canvas height (default the classic 910).
    * Pages pass BookRuntime.canvasHeight() so books compile to the
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
@@ -192,7 +197,14 @@
     var H = (opts && opts.height) || 910;
     var out = { name: story.name || 'Untitled', height: H, cards: [] };
     (story.cards || []).forEach(function (c, i) {
-      var compiled = compileCard(c || {}, H, i);
+      c = c || {};
+      if (c.type === 'gallery') {
+        (c.items || []).slice(0, 5).forEach(function (it, j) {
+          out.cards.push(compileItemCard(it || {}, H, i + '.' + j));
+        });
+        return;
+      }
+      var compiled = compileCard(c, H, i);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended
