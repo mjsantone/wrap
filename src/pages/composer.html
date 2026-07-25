@@ -460,7 +460,10 @@
     try {
       var story = await generateServer(text);
       if (story === null) {
-        showError('Generation isn’t available on this copy of the site — it needs the hosted deployment.');
+        /* static mirror (GitHub Pages) — walk the visitor to the real site */
+        errorBox.innerHTML = 'This is the static mirror — generation lives on ' +
+          '<a href="https://jolly-sky-0b3a48c1e.7.azurestaticapps.net/" style="color: var(--accent); text-decoration: none;">the hosted site →</a>';
+        errorBox.hidden = false;
         return;
       }
       showPlayer(story);

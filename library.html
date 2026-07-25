@@ -1100,10 +1100,17 @@ body { margin: 0; background: #000; }
     if (t) { t.id = 'sampleTile'; shelf.appendChild(t); rescale(); }
   }
 
-  function fail(msg) {
+  function fail(msg, link) {
     loadingBox.hidden = true;
     moreRow.hidden = true;
     errorMsg.textContent = msg;
+    if (link) {
+      var a = document.createElement('a');
+      a.href = link;
+      a.textContent = 'Open the library there →';
+      errorMsg.appendChild(document.createElement('br'));
+      errorMsg.appendChild(a);
+    }
     errorBox.hidden = false;
     appendSample();
   }
@@ -1114,7 +1121,7 @@ body { margin: 0; background: #000; }
     try {
       res = await fetch('/api/library?limit=' + PAGE + '&offset=' + offset);
     } catch (e) {
-      return fail('The library lives on the hosted deployment — this copy of the site has no API.');
+      return fail('This is the static mirror — the shelf lives on the hosted site.', 'https://jolly-sky-0b3a48c1e.7.azurestaticapps.net/library');
     }
     if (!res.ok) return fail('Couldn’t load the library right now (HTTP ' + res.status + '). Try a refresh.');
     var data = await res.json();
