@@ -180,6 +180,10 @@ body { margin: 0; background: #000; }
 .pv-btn[hidden] { display: none; }
 .pv-btn.prev { left: 2px; } .pv-btn.next { right: 2px; }
 .pv-btn svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); }
+/* phones flip by dragging or tapping the edges — hide the desktop chevrons */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  .pv-btn { display: none; }
+}
 .tap-zone { position: absolute; top: 60px; bottom: 40px; width: 15%; z-index: 960; cursor: pointer; }
 .tap-zone.left { left: 0; } .tap-zone.right { right: 0; }
 
