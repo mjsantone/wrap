@@ -1,0 +1,45 @@
+# Deploys api/ to the standalone Azure Functions app (image-flow-book) —
+# the long-call host for image and story generation, free of SWA's ~45s
+# response cap. The Static Web App keeps its own managed copy of the same
+# API as the short-call / fallback path; both deploy from the same api/.
+#
+# Requires the repo secret AZURE_FUNCTIONAPP_PUBLISH_PROFILE: the app's
+# publish profile XML (Function App → Overview → Download publish profile;
+# SCM basic auth must be enabled).
+name: Deploy Functions (long-call host)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/deploy-functions.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run API tests
+        working-directory: api
+        run: |
+          npm ci
+          npm test
+
+      - name: Strip dev artifacts from the package
+        # the remote (Oryx) build installs production deps on the app itself
+        run: rm -rf api/node_modules api/test
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: image-flow-book
+          package: api
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          remote-build: true

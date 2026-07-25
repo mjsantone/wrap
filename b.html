@@ -301,7 +301,7 @@ html, body { overscroll-behavior: none; }
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
-      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.16</p>
+      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.17</p>
     </div>
   </div>
 </div>
@@ -1286,16 +1286,29 @@ html, body { overscroll-behavior: none; }
     );
   }
 
+  /* The long-call host (see composer): image generation without SWA's
+   * ~45s response cap; same-origin remains the fallback. */
+  var LONG_API = 'https://image-flow-book-hpcuehhccbb2chcg.westus2-01.azurewebsites.net';
+  async function apiFetch(path, opts) {
+    if (LONG_API) {
+      try {
+        var r = await fetch(LONG_API + path, opts);
+        if (r.status !== 404) return r;
+      } catch (e) {}
+    }
+    return fetch(path, opts);
+  }
+
   /* Actively finish the book: request each missing picture, one at a
-   * time (mirrors the composer's fan-out — sequential stays under the
-   * API's response cap). 503/429 means no provider or no budget — stop
-   * and leave the rest to the polling net. */
+   * time (mirrors the composer's fan-out — sequential keeps each call
+   * inside its host's response budget). 503/429 means no provider or no
+   * budget — stop and leave the rest to the polling net. */
   async function fanOutImages(missing) {
     var netFails = 0;
     for (var i = 0; i < missing.length; i++) {
       var res;
       try {
-        res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
+        res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slot: missing[i] }),

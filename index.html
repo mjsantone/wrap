@@ -460,7 +460,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.16</span>
+      <span>v0.0.17</span>
     </footer>
   </div>
 </div>
@@ -1432,6 +1432,23 @@ html, body { overscroll-behavior: none; }
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
 
+  /* ---------- the long-call API host ----------
+   * Story and image generation run long; SWA severs responses at ~45s.
+   * A standalone Functions app (baked in at build time from the LONG_API
+   * file) hosts the same API without that cap. Try it first and fall
+   * back to same-origin when it's unreachable or not yet deployed —
+   * the site keeps working on managed functions alone. */
+  var LONG_API = 'https://image-flow-book-hpcuehhccbb2chcg.westus2-01.azurewebsites.net';
+  async function apiFetch(path, opts) {
+    if (LONG_API) {
+      try {
+        var r = await fetch(LONG_API + path, opts);
+        if (r.status !== 404) return r;
+      } catch (e) { /* CORS not set / app down — same-origin still works */ }
+    }
+    return fetch(path, opts);
+  }
+
   /* ---------- generation: the hosted API, server-side ----------
    * Returns the story, or null when no server is available (static
    * hosting, or the API has no model keys configured). Real generation
@@ -1439,7 +1456,7 @@ html, body { overscroll-behavior: none; }
   async function generateServer(storyText) {
     var res;
     try {
-      res = await fetch('/api/generate', {
+      res = await apiFetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ story: storyText })
@@ -1607,7 +1624,7 @@ html, body { overscroll-behavior: none; }
       if (lastShareId !== id) return; // a newer share took over
       var res;
       try {
-        res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
+        res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slot: slots[i] }),
