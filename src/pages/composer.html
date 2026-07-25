@@ -130,9 +130,8 @@
   .chrome { display: contents; }
   .pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
   .pv-actions .back-btn { position: static; }
-  .chrome-toggle { display: none; }
 
-  /* phones: actions live in a pull-up sheet behind a ⋯ handle */
+  /* phones: actions live in a pull-up sheet — swipe up on the book to open */
   @media (max-width: 640px), (hover: none) and (pointer: coarse) {
     /* open sheet: the book recedes — scaled, dimmed, rounded like a card */
     .card-container { transition: transform 0.28s ease, filter 0.28s ease, border-radius 0.28s ease; }
@@ -164,15 +163,8 @@
     }
     .pv-actions { position: static; display: contents; }
     .chrome #backBtn { order: 4; background: none; color: var(--muted); }
-    /* the toast must clear the ⋯ handle (specificity beats the later base rule) */
-    .screen .share-toast { bottom: calc(72px + env(safe-area-inset-bottom)); }
-    .chrome-toggle {
-      touch-action: none;
-      display: block; position: absolute; z-index: 1021;
-      bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
-      font-size: 22px; line-height: 1; padding: 6px 22px 12px; cursor: pointer; opacity: 0.65;
-    }
+    /* the toast clears the home-indicator area (specificity beats the later base rule) */
+    .screen .share-toast { bottom: calc(26px + env(safe-area-inset-bottom)); }
   }
   .share-toast {
     position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
@@ -272,7 +264,6 @@
         <button class="back-btn" id="regenBtn">↻ Regenerate</button>
       </div>
     </div>
-    <button class="chrome-toggle" id="chromeToggle" aria-label="Book actions">⋯</button>
     <div class="share-toast" id="shareToast" hidden></div>
   </div>
 </div>
@@ -300,6 +291,14 @@
     keyGate: function () {
       return !playerStage.hidden &&
         !document.getElementById('chromeBar').classList.contains('open');
+    },
+    /* swipe up anywhere on the book to pull the action sheet up */
+    onSwipeUp: function () { if (isPhone()) setSheet(true); },
+    /* the sheet presents itself when the reader lands on the last page —
+     * the share moment — without a visible handle the rest of the time */
+    onPage: function (i, n) {
+      if (i === n - 1 && i !== lastPageSeen && isPhone()) setSheet(true);
+      lastPageSeen = i;
     },
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
@@ -355,6 +354,7 @@
   }
   function showHome() {
     playerStage.hidden = true;
+    setSheet(false); /* don't carry an open sheet into the next book */
     homeView.classList.remove('hidden');
     /* undo the player's chameleon chrome tint */
     document.body.style.background = '';
@@ -362,20 +362,20 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', '#100F12');
   }
-  /* phone action sheet: the ⋯ handle pulls the actions up; using one closes it */
+  /* phone action sheet: swipe up on the book pulls the actions up (see
+   * onSwipeUp above); it also pops itself on the last page; using one
+   * of its buttons closes it */
   var chromeBar = document.getElementById('chromeBar');
-  var chromeToggleEl = document.getElementById('chromeToggle');
   var screenNode = document.getElementById('screen');
+  var lastPageSeen = -1;
+  function isPhone() {
+    return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
+  }
   function setSheet(open) {
     chromeBar.classList.toggle('open', open);
     /* the book pushes back and locks while the sheet is up */
     screenNode.classList.toggle('sheet-open', open);
   }
-  var suppressToggleClick = false;
-  chromeToggleEl.addEventListener('click', function () {
-    if (suppressToggleClick) { suppressToggleClick = false; return; }
-    setSheet(!chromeBar.classList.contains('open'));
-  });
   chromeBar.addEventListener('click', function (e) {
     if (e.target.closest('button')) setSheet(false);
   });
@@ -386,7 +386,7 @@
   screenNode.addEventListener('pointerdown', function (e) {
     scrimDismissed = false;
     if (!chromeBar.classList.contains('open')) return;
-    if (e.target.closest('.chrome') || e.target.closest('.chrome-toggle')) return;
+    if (e.target.closest('.chrome')) return;
     setSheet(false);
     scrimDismissed = true;
     e.stopPropagation(); /* the player never sees it — no flip, no drag */
@@ -399,7 +399,7 @@
     }
   }, true);
 
-  /* swipe: drag the open sheet down to dismiss; flick up on ⋯ to open */
+  /* swipe: drag the open sheet down to dismiss */
   var sheetDrag = null;
   chromeBar.addEventListener('pointerdown', function (e) {
     if (chromeBar.classList.contains('open')) sheetDrag = { y: e.clientY, moved: false };
@@ -427,21 +427,6 @@
   }
   chromeBar.addEventListener('pointerup', endSheetDrag);
   chromeBar.addEventListener('pointercancel', endSheetDrag);
-
-  var toggleFlick = null;
-  chromeToggleEl.addEventListener('pointerdown', function (e) {
-    toggleFlick = e.clientY;
-    /* capture so the flick keeps reporting after it leaves the small pill */
-    try { chromeToggleEl.setPointerCapture(e.pointerId); } catch (err) {}
-  });
-  chromeToggleEl.addEventListener('pointermove', function (e) {
-    if (toggleFlick != null && toggleFlick - e.clientY > 18) {
-      setSheet(true);
-      toggleFlick = null;
-      suppressToggleClick = true; /* the captured release also fires click */
-    }
-  });
-  chromeToggleEl.addEventListener('pointerup', function () { toggleFlick = null; });
 
   document.getElementById('backBtn').addEventListener('click', showHome);
   document.getElementById('regenBtn').addEventListener('click', function () {
@@ -495,7 +480,10 @@
         res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slot: slots[i] })
+          body: JSON.stringify({ slot: slots[i] }),
+          /* navigating away mustn't kill the picture being painted —
+           * the viewer's own fan-out picks up whatever's still missing */
+          keepalive: true
         });
       } catch (e) { setImageNote(null); return; }
       if (res.status === 503 || res.status === 429) { setImageNote(null); return; }

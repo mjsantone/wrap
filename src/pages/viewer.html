@@ -129,10 +129,13 @@
   }
 
   /* ---------- late-arriving pictures ----------
-   * A link opened while the sharer's image fan-out is still running has
-   * empty slots. Re-read the book on an interval and fade each picture
-   * in as it lands (render() tags slot elements with data-slot), giving
-   * up after roughly the fan-out's own worst-case duration. */
+   * A link opened while the sharer's image fan-out is still running — or
+   * after they navigated away mid-run — has empty slots. Two recoveries:
+   * this page requests the missing pictures itself (the POST is
+   * idempotent per slot, so racing the sharer is harmless), and it also
+   * re-reads the book on an interval to pick up images another tab is
+   * generating, fading each in as it lands (render() tags slot elements
+   * with data-slot). */
   var POLL_MS = window.BOOK_IMG_POLL_MS || 8000; /* tests override the interval */
   var MAX_POLLS = 24;
 
@@ -147,11 +150,42 @@
     return map;
   }
 
+  function attachSlot(key, url) {
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-slot="' + key + '"]'),
+      function (el) { BookRuntime.attachImage(el, url); }
+    );
+  }
+
+  /* Actively finish the book: request each missing picture, one at a
+   * time (mirrors the composer's fan-out — sequential stays under the
+   * API's response cap). 503/429 means no provider or no budget — stop
+   * and leave the rest to the polling net. */
+  async function fanOutImages(missing) {
+    for (var i = 0; i < missing.length; i++) {
+      var res;
+      try {
+        res = await fetch('/api/books/' + encodeURIComponent(id) + '/images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot: missing[i] }),
+          keepalive: true
+        });
+      } catch (e) { return; }
+      if (res.status === 503 || res.status === 429) return;
+      if (!res.ok) continue;
+      var d = null;
+      try { d = await res.json(); } catch (e) { continue; }
+      if (d && d.url) attachSlot(d.slot, d.url);
+    }
+  }
+
   function watchImages(story) {
     var missing = [];
     var urls = imageUrls(story);
     for (var k in urls) { if (!urls[k]) missing.push(k); }
     if (!missing.length) return;
+    fanOutImages(missing);
     var polls = 0;
     var timer = setInterval(function () {
       if (++polls > MAX_POLLS) return clearInterval(timer);
