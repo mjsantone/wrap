@@ -362,7 +362,7 @@
     /* live drag flip around the left spine */
     var drag = null;
     screenEl.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('button') || e.target.closest('a')) return;
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.chrome')) return;
       if (opts.dragGate && !opts.dragGate()) return;
       drag = { x: e.clientX, y: e.clientY, mode: null, card: null, fwd: true, dx: 0 };
     });

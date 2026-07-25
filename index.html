@@ -35,6 +35,7 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; background: #000; }
+html, body { overscroll-behavior: none; }
 
 .player-stage {
   position: fixed; inset: 0; margin: 0; background: #000;
@@ -321,6 +322,7 @@ body { margin: 0; background: #000; }
   /* phones: actions live in a pull-up sheet behind a ⋯ handle */
   @media (max-width: 640px), (hover: none) and (pointer: coarse) {
     .chrome {
+      touch-action: none; /* we handle vertical drags — stop browser panning */
       display: flex; flex-direction: column; gap: 10px;
       position: absolute; left: 0; right: 0; bottom: 0; z-index: 1022;
       background: #101114;
@@ -344,6 +346,7 @@ body { margin: 0; background: #000; }
     /* the toast must clear the ⋯ handle (specificity beats the later base rule) */
     .screen .share-toast { bottom: calc(72px + env(safe-area-inset-bottom)); }
     .chrome-toggle {
+      touch-action: none;
       display: block; position: absolute; z-index: 1021;
       bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
@@ -417,7 +420,7 @@ body { margin: 0; background: #000; }
     <div class="error-box" id="errorBox" hidden></div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.2</span>
+      <span>Set in Fraunces · v0.0.3</span>
       <span><a href="library.html">Library</a></span>
     </footer>
   </div>
@@ -818,7 +821,7 @@ body { margin: 0; background: #000; }
     /* live drag flip around the left spine */
     var drag = null;
     screenEl.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('button') || e.target.closest('a')) return;
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.chrome')) return;
       if (opts.dragGate && !opts.dragGate()) return;
       drag = { x: e.clientX, y: e.clientY, mode: null, card: null, fwd: true, dx: 0 };
     });
@@ -1242,12 +1245,59 @@ body { margin: 0; background: #000; }
   }
   /* phone action sheet: the ⋯ handle pulls the actions up; using one closes it */
   var chromeBar = document.getElementById('chromeBar');
-  document.getElementById('chromeToggle').addEventListener('click', function () {
+  var chromeToggleEl = document.getElementById('chromeToggle');
+  var suppressToggleClick = false;
+  chromeToggleEl.addEventListener('click', function () {
+    if (suppressToggleClick) { suppressToggleClick = false; return; }
     chromeBar.classList.toggle('open');
   });
   chromeBar.addEventListener('click', function (e) {
     if (e.target.closest('button')) chromeBar.classList.remove('open');
   });
+
+  /* swipe: drag the open sheet down to dismiss; flick up on ⋯ to open */
+  var sheetDrag = null;
+  chromeBar.addEventListener('pointerdown', function (e) {
+    if (chromeBar.classList.contains('open')) sheetDrag = { y: e.clientY, moved: false };
+  });
+  chromeBar.addEventListener('pointermove', function (e) {
+    if (!sheetDrag) return;
+    var dy = e.clientY - sheetDrag.y;
+    if (dy > 6 && !sheetDrag.moved) {
+      sheetDrag.moved = true;
+      /* capture so the drag survives crossing overlays (e.g. the toast) */
+      try { chromeBar.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (sheetDrag.moved) {
+      chromeBar.style.transition = 'none';
+      chromeBar.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    }
+  });
+  function endSheetDrag(e) {
+    if (!sheetDrag) return;
+    var dy = e.clientY - sheetDrag.y;
+    chromeBar.style.transition = '';
+    chromeBar.style.transform = '';
+    if (sheetDrag.moved && dy > 55) chromeBar.classList.remove('open');
+    sheetDrag = null;
+  }
+  chromeBar.addEventListener('pointerup', endSheetDrag);
+  chromeBar.addEventListener('pointercancel', endSheetDrag);
+
+  var toggleFlick = null;
+  chromeToggleEl.addEventListener('pointerdown', function (e) {
+    toggleFlick = e.clientY;
+    /* capture so the flick keeps reporting after it leaves the small pill */
+    try { chromeToggleEl.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  chromeToggleEl.addEventListener('pointermove', function (e) {
+    if (toggleFlick != null && toggleFlick - e.clientY > 18) {
+      chromeBar.classList.add('open');
+      toggleFlick = null;
+      suppressToggleClick = true; /* the captured release also fires click */
+    }
+  });
+  chromeToggleEl.addEventListener('pointerup', function () { toggleFlick = null; });
 
   document.getElementById('backBtn').addEventListener('click', showHome);
   document.getElementById('regenBtn').addEventListener('click', function () {
