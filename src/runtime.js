@@ -38,8 +38,10 @@
     if (!css.position || css.position !== 'absolute') el.style.position = 'absolute';
   }
 
+  /* Solid ink tone for an image slot awaiting its photograph — the page
+   * design is gradient-free; h2 rides along only for stored-story compat. */
   function grad(h1, h2) {
-    return 'linear-gradient(160deg, hsl(' + h1 + ',30%,36%), hsl(' + h2 + ',34%,14%))';
+    return 'hsl(' + h1 + ', 22%, 17%)';
   }
 
   /* Logical canvas height for the adaptive canvas: follows the viewport

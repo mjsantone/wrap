@@ -7,7 +7,7 @@
       "type": "array",
       "items": {
         "type": "object", "additionalProperties": false,
-        "required": ["type", "kicker", "title", "body", "lines", "attribution", "price", "button", "url", "address", "image", "items"],
+        "required": ["type", "kicker", "title", "body", "lines", "attribution", "price", "button", "url", "address", "layout", "image", "items"],
         "properties": {
           "type": { "type": "string", "enum": ["cover", "quote", "prose", "gallery", "product", "video", "map"] },
           "kicker": { "type": ["string", "null"] },
@@ -19,6 +19,15 @@
           "button": { "type": ["string", "null"] },
           "url": { "type": ["string", "null"] },
           "address": { "type": ["string", "null"] },
+          "layout": {
+            "type": ["object", "null"], "additionalProperties": false,
+            "required": ["band", "align", "scale"],
+            "properties": {
+              "band": { "type": ["string", "null"], "enum": ["top", "middle", "bottom", null] },
+              "align": { "type": ["string", "null"], "enum": ["center", "left", null] },
+              "scale": { "type": ["string", "null"], "enum": ["quiet", "standard", "loud", null] }
+            }
+          },
           "image": {
             "type": ["object", "null"], "additionalProperties": false,
             "required": ["h1", "h2", "label"],

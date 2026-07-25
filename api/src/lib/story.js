@@ -40,6 +40,20 @@ function hue(v, fallback) {
   return Number.isInteger(v) ? ((v % 360) + 360) % 360 : fallback;
 }
 
+const LAYOUT_BANDS = ['top', 'middle', 'bottom'];
+const LAYOUT_ALIGNS = ['center', 'left'];
+const LAYOUT_SCALES = ['quiet', 'standard', 'loud'];
+
+function cleanLayout(l) {
+  if (!l || typeof l !== 'object') return null;
+  const out = {
+    band: LAYOUT_BANDS.includes(l.band) ? l.band : null,
+    align: LAYOUT_ALIGNS.includes(l.align) ? l.align : null,
+    scale: LAYOUT_SCALES.includes(l.scale) ? l.scale : null,
+  };
+  return out.band || out.align || out.scale ? out : null;
+}
+
 function cleanImage(img) {
   if (!img || typeof img !== 'object') return null;
   return {
@@ -64,6 +78,7 @@ function cleanCard(c, index) {
     button: str(c.button, LIMITS.button),
     url: str(c.url, LIMITS.url),
     address: str(c.address, LIMITS.address),
+    layout: cleanLayout(c.layout),
     image: cleanImage(c.image),
     items: null,
   };
