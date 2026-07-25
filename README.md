@@ -3,8 +3,9 @@
 **BOOK** is a phone-sized flip-book for telling stories — type a few sentences,
 an LLM writes the cards, and you flip through them like a small book.
 
-**Live site:** https://mjsantone.github.io/wrap/ (static) · Azure Static Web
-Apps (hosted generation, sharing, and the library)
+**Live site:** https://jolly-sky-0b3a48c1e.7.azurestaticapps.net (hosted
+generation, sharing, pictures, and the library) ·
+https://mjsantone.github.io/wrap/ (static mirror — plays books only)
 
 | Page | What it is |
 | --- | --- |
