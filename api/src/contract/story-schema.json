@@ -24,9 +24,9 @@
             "type": ["object", "null"], "additionalProperties": false,
             "required": ["band", "align", "scale"],
             "properties": {
-              "band": { "type": ["string", "null"], "enum": ["top", "middle", "bottom", null] },
-              "align": { "type": ["string", "null"], "enum": ["center", "left", null] },
-              "scale": { "type": ["string", "null"], "enum": ["quiet", "standard", "loud", null] }
+              "band": { "anyOf": [{ "type": "string", "enum": ["top", "middle", "bottom"] }, { "type": "null" }] },
+              "align": { "anyOf": [{ "type": "string", "enum": ["center", "left"] }, { "type": "null" }] },
+              "scale": { "anyOf": [{ "type": "string", "enum": ["quiet", "standard", "loud"] }, { "type": "null" }] }
             }
           },
           "image": {
