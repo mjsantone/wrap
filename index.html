@@ -433,7 +433,7 @@ html, body { overscroll-behavior: none; }
     <div class="error-box" id="errorBox" hidden></div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.5</span>
+      <span>Set in Fraunces · v0.0.6</span>
       <span><a href="library.html">Library</a></span>
     </footer>
   </div>
@@ -1044,19 +1044,6 @@ html, body { overscroll-behavior: none; }
       k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
-    if (t === 'gallery') {
-      var items = (c.items || []).slice(0, 5).map(function (it, j) {
-        var ik = [];
-        ik.push(img(FULL, it.image, slot + '.' + j));
-        ik.push({ t: 'gradation', css: FULL });
-        if (it.kicker) ik.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
-        var isize = fitFont(it.title || '', RAMP.gtitle, 15);
-        ik.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
-        ik.push(tb(escapeHtml(it.body || ''), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
-        return { k: ik };
-      });
-      return { bg: inkBg(c.items && c.items[0] && c.items[0].image), k: [{ t: 'gallery', k: items }] };
-    }
     if (t === 'product') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'gradation', css: FULL });
@@ -1093,6 +1080,24 @@ html, body { overscroll-behavior: none; }
     return null;
   }
 
+  /* Vertical scrolling is retired: a stored gallery card flattens into
+   * one flip card per moment, keeping the whole book on the horizontal
+   * axis. Slot keys stay "i.j" so stored image urls and the fan-out
+   * still land on the right page. */
+  function compileItemCard(it, H, slot) {
+    var botShift = H - 910;
+    function bot(y) { return y + botShift; }
+    var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
+    var k = [];
+    k.push(img(FULL, it.image, slot));
+    k.push({ t: 'gradation', css: FULL });
+    if (it.kicker) k.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+    var isize = fitFont(it.title || '', RAMP.gtitle, 15);
+    k.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
+    if (it.body) k.push(tb(escapeHtml(it.body), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
+    return { bg: inkBg(it.image), k: k };
+  }
+
   /* opts.height: the logical canvas height (default the classic 910).
    * Pages pass BookRuntime.canvasHeight() so books compile to the
    * viewer's screen; the shelf pins 910 for consistent thumbnails. */
@@ -1100,7 +1105,14 @@ html, body { overscroll-behavior: none; }
     var H = (opts && opts.height) || 910;
     var out = { name: story.name || 'Untitled', height: H, cards: [] };
     (story.cards || []).forEach(function (c, i) {
-      var compiled = compileCard(c || {}, H, i);
+      c = c || {};
+      if (c.type === 'gallery') {
+        (c.items || []).slice(0, 5).forEach(function (it, j) {
+          out.cards.push(compileItemCard(it || {}, H, i + '.' + j));
+        });
+        return;
+      }
+      var compiled = compileCard(c, H, i);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended
@@ -1125,7 +1137,7 @@ html, body { overscroll-behavior: none; }
         "type": "object", "additionalProperties": false,
         "required": ["type", "kicker", "title", "body", "lines", "attribution", "price", "button", "url", "address", "layout", "image", "items"],
         "properties": {
-          "type": { "type": "string", "enum": ["cover", "quote", "prose", "gallery", "product", "video", "map"] },
+          "type": { "type": "string", "enum": ["cover", "quote", "prose", "product", "video", "map"] },
           "kicker": { "type": ["string", "null"] },
           "title": { "type": ["string", "null"] },
           "body": { "type": ["string", "null"] },
@@ -1180,7 +1192,6 @@ html, body { overscroll-behavior: none; }
   "Given a story idea, compose a book of 5 to 8 cards using these card types:",
   "- cover: the opening card. title (2-4 words, evocative) + kicker (a one-line subtitle). Always first.",
   "- prose: a narrative beat. kicker (optional small line), title (2-5 words), body (2-4 sentences, warm and concrete).",
-  "- gallery: 3-4 moments the reader scrolls through vertically. Each item: kicker (place/context, 1-3 words), title (2-3 words), body (1-2 sentences).",
   "- quote: a poem, letter excerpt, or meaningful quotation. lines (each line short), attribution (optional). Use at most once.",
   "- product: something offered or celebrated, with a call to action. title, body, optional price (like \"$18\"), button (2-3 words), url (real if given or verified, else null).",
   "- video: only if the user mentions a video or gives a YouTube link. url required.",
@@ -1193,9 +1204,9 @@ html, body { overscroll-behavior: none; }
   "",
   "Every card and gallery item needs an image. Its label is the brief a photographer would shoot from: 4-8 concrete words naming subject, setting, and light or time of day (e.g. \"weathered lighthouse on a cliff at dusk\", \"flour-dusted hands shaping dough, morning window light\"). Photographable things only - no abstractions, no emotions as subjects, no readable text or signage, no real people's names or likenesses. h1 and h2 are HSL hues 0-359 evoking the scene (the renderer shows a solid ink tone in that hue until the photo arrives - warm 10-50, golden 40-60, green 90-150, teal 170-200, blue 200-250, violet 250-290, rose 300-340).",
   "",
-  "Art direction: every card (except gallery and map) may set layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo. align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Direct each page deliberately and vary the book: a poster-loud centered cover, a left-aligned bottom band for a prose page, a quiet middle whisper for the quote. Repeating the same layout on every card reads flat; null means the classic default for that card type.",
+  "Art direction: every card (except map) may set layout = {band, align, scale} to place its type on the page. band: \"top\", \"middle\", or \"bottom\" - where the text block sits over the photo. align: \"center\" or \"left\". scale: \"quiet\", \"standard\", or \"loud\" - how large the title speaks. Direct each page deliberately and vary the book: a poster-loud centered cover, a left-aligned bottom band for a prose page, a quiet middle whisper for the quote. Repeating the same layout on every card reads flat; null means the classic default for that card type.",
   "",
-  "Composition rules: exactly one cover, first. Sequence like a small book - the cover makes a promise, the middle develops it (prose and gallery carry the story), and the last card lands it (a quote, a map, or a closing prose beat). Vary card types; never two galleries. Pick one palette family for the whole book and let hues drift within it, so the book reads as one color story. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
+  "Composition rules: exactly one cover, first. Sequence like a small book - the cover makes a promise, the middle develops it (prose pages carry the story - a run of short consecutive prose cards works well for a sequence of moments), and the last card lands it (a quote, a map, or a closing prose beat). Vary card types and layouts. Pick one palette family for the whole book and let hues drift within it, so the book reads as one color story. Fields that do not apply to a card type must be null. Do not add a closing card - the player appends one. name = a short title for the whole book.",
   "Write with specificity and heart, in the register the story calls for - a love story is not a product launch."
 ]
 ).join('\n');
