@@ -557,6 +557,19 @@ body { margin: 0; background: #000; }
       pageBar.style.left = (current * 100 / total) + '%';
       prevBtn.hidden = current === 0;
       nextBtn.hidden = current === total - 1;
+      /* Chameleon chrome: browsers reserve top/bottom bands (status bar,
+       * toolbar) and tint them from theme-color / the page background.
+       * Painting both with the current card's color makes the book bleed
+       * into them instead of sitting between black bars. */
+      var bg = cards[current] && cards[current].style.background;
+      if (bg) {
+        var stage = screenEl.parentElement;
+        if (stage) stage.style.background = bg;
+        document.body.style.background = bg;
+        document.documentElement.style.background = bg;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', bg);
+      }
     }
 
     function go(dir) {
