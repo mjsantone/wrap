@@ -460,7 +460,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.15</span>
+      <span>v0.0.16</span>
     </footer>
   </div>
 </div>
@@ -1602,7 +1602,7 @@ html, body { overscroll-behavior: none; }
   }
 
   async function fanOutImages(id, slots) {
-    var landed = 0, firstErr = null;
+    var landed = 0, firstErr = null, netFails = 0;
     for (var i = 0; i < (slots || []).length; i++) {
       if (lastShareId !== id) return; // a newer share took over
       var res;
@@ -1615,7 +1615,16 @@ html, body { overscroll-behavior: none; }
            * the viewer's own fan-out picks up whatever's still missing */
           keepalive: true
         });
-      } catch (e) { setImageNote(null); return; }
+      } catch (e) {
+        /* a severed connection isn't proof of failure — with a raised
+         * IMAGE_TIMEOUT_MS the server may finish painting after the
+         * platform cuts the response, and reopening the link collects
+         * it. Keep going; two drops in a row means we're offline. */
+        if (++netFails >= 2) { setImageNote(null); return; }
+        if (!firstErr) firstErr = 'connection dropped';
+        continue;
+      }
+      netFails = 0;
       if (res.status === 503 || res.status === 429) { setImageNote(null); return; }
       if (!res.ok) { // one bad slot shouldn't stop the rest — but remember why
         if (!firstErr) {

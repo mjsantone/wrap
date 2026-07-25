@@ -162,6 +162,7 @@
    * API's response cap). 503/429 means no provider or no budget — stop
    * and leave the rest to the polling net. */
   async function fanOutImages(missing) {
+    var netFails = 0;
     for (var i = 0; i < missing.length; i++) {
       var res;
       try {
@@ -171,7 +172,14 @@
           body: JSON.stringify({ slot: missing[i] }),
           keepalive: true
         });
-      } catch (e) { return; }
+      } catch (e) {
+        /* a severed connection may still land server-side (raised
+         * IMAGE_TIMEOUT_MS) — the polling net collects it; two drops
+         * in a row means we're offline */
+        if (++netFails >= 2) return;
+        continue;
+      }
+      netFails = 0;
       if (res.status === 503 || res.status === 429) return;
       if (!res.ok) continue;
       var d = null;
