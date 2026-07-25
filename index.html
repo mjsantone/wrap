@@ -465,8 +465,8 @@ html, body { overscroll-behavior: none; }
     <div class="error-box" id="errorBox" hidden></div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.10</span>
-      <span><a href="library.html">Library</a></span>
+      <span>Set in Fraunces</span>
+      <span>v0.0.12</span>
     </footer>
   </div>
 </div>
@@ -1244,9 +1244,9 @@ html, body { overscroll-behavior: none; }
             "type": ["object", "null"], "additionalProperties": false,
             "required": ["band", "align", "scale"],
             "properties": {
-              "band": { "type": ["string", "null"], "enum": ["top", "middle", "bottom", null] },
-              "align": { "type": ["string", "null"], "enum": ["center", "left", null] },
-              "scale": { "type": ["string", "null"], "enum": ["quiet", "standard", "loud", null] }
+              "band": { "anyOf": [{ "type": "string", "enum": ["top", "middle", "bottom"] }, { "type": "null" }] },
+              "align": { "anyOf": [{ "type": "string", "enum": ["center", "left"] }, { "type": "null" }] },
+              "scale": { "anyOf": [{ "type": "string", "enum": ["quiet", "standard", "loud"] }, { "type": "null" }] }
             }
           },
           "image": {

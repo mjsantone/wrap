@@ -157,6 +157,14 @@ async function generateStory(storyText, client) {
       } else if (useTools && isToolsUnsupported(err)) {
         toolsSupported = false;
         useTools = false;
+      } else if (err && err.status === 400 && useSchema) {
+        /* Workspaces phrase capability errors inconsistently — on any
+         * unrecognized 400, strip optional features for this request
+         * (not memoized: a healthy deployment isn't permanently
+         * downgraded by an unrelated 400). */
+        useSchema = false;
+      } else if (err && err.status === 400 && useTools) {
+        useTools = false;
       } else {
         throw err;
       }

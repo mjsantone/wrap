@@ -113,6 +113,31 @@ test('falls back to prompt-enforced JSON when structured outputs are unsupported
   assert.equal(calls[2].output_config, undefined);
 });
 
+test('an unrecognized 400 strips optional features without memoizing', async () => {
+  const story = { name: 'B', cards: [{ type: 'cover', title: 'B' }] };
+  const calls = [];
+  const client = {
+    messages: {
+      create: async (params) => {
+        calls.push(params);
+        if (params.output_config) {
+          const e = new Error('Extra inputs are not permitted'); // no keyword
+          e.status = 400;
+          throw e;
+        }
+        return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(story) }] };
+      },
+    },
+  };
+  const out = await generateStory('x', client);
+  assert.deepEqual(out, story);
+  assert.equal(calls[1].output_config, undefined);
+  // not memoized: the next generation tries structured outputs again
+  await generateStory('y', client);
+  assert.ok(calls[2].output_config, 'schema retried on the next call');
+  assert.equal(calls.length, 4);
+});
+
 test('other 400s are not swallowed by the fallback', async () => {
   const client = {
     messages: {
