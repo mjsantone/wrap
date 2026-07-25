@@ -19,7 +19,9 @@ html, body { overscroll-behavior: none; }
   width: min(100vw, calc(100vh * 640 / 910));
   aspect-ratio: 640 / 910;
   background: #000; overflow: hidden;
-  touch-action: pan-y;
+  /* all gestures are ours: horizontal flips and the vertical
+   * action-sheet swipe — browser panning would pointercancel them */
+  touch-action: none;
   /* swiping must never select card text */
   -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -120,7 +122,7 @@ html, body { overscroll-behavior: none; }
   border: 2px solid rgba(255,255,255,0.85); border-radius: 6px;
   background: rgba(0,0,0,0.25) !important;
 }
-.cmp-map { display: block; overflow: hidden; text-decoration: none; }
+.cmp-map { display: block; overflow: hidden; text-decoration: none; -webkit-user-drag: none; }
 .cmp-map > svg.map-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .cmp-map .map-pin {
   position: absolute; inset: 0; display: flex; flex-direction: column;

@@ -201,6 +201,7 @@
       el.href = 'https://maps.google.com/?q=' + encodeURIComponent(node.value || '');
       el.target = '_blank'; el.rel = 'noopener noreferrer';
       el.title = node.value || '';
+      el.draggable = false; /* native link-drag would swallow the flip drag */
       applyCss(el, node.css);
       if (isMap) {
         el.className = 'cmp cmp-map';
@@ -333,6 +334,7 @@
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute('content', bg);
       }
+      if (opts.onPage) opts.onPage(current, total);
     }
 
     function go(dir) {
@@ -393,18 +395,46 @@
 
     /* live drag flip around the left spine */
     var drag = null;
+    var swallowClick = false;
     screenEl.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.chrome')) return;
+      if (e.target.closest('button') || e.target.closest('.chrome')) return;
+      /* links block drags — except the full-bleed map card, where the
+       * whole page is one <a> and flips must still work; a real drag
+       * swallows the click below, so taps alone open the map */
+      var link = e.target.closest('a');
+      if (link && !link.classList.contains('cmp-map')) return;
       if (opts.dragGate && !opts.dragGate()) return;
       drag = { x: e.clientX, y: e.clientY, mode: null, card: null, fwd: true, dx: 0 };
     });
+    /* after a drag the release still synthesizes a click — it must not
+     * follow the map link or trip a tap-zone */
+    screenEl.addEventListener('click', function (e) {
+      if (swallowClick) {
+        swallowClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
     screenEl.addEventListener('pointermove', function (e) {
       if (!drag) return;
       var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (!drag.mode) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
-        if (Math.abs(dx) <= Math.abs(dy)) { drag = null; return; } // vertical → galleries scroll natively
-        drag.mode = 'h'; drag.fwd = dx < 0;
+        if (Math.abs(dx) <= Math.abs(dy)) { drag.mode = 'v'; } // vertical → the page hook (action sheet)
+        else {
+          drag.mode = 'h';
+        }
+      }
+      if (drag.mode === 'v') {
+        if (dy < -40) {
+          drag = null;
+          swallowClick = true;
+          if (opts.onSwipeUp) opts.onSwipeUp();
+        }
+        return;
+      }
+      if (drag.mode === 'h' && !drag.card) {
+        drag.fwd = dx < 0;
         if (!drag.fwd && current === 0) { drag = null; return; }
         drag.card = drag.fwd ? cards[current] : cards[current - 1];
         drag.card.classList.add('is-dragging');
@@ -431,6 +461,7 @@
     function endDrag() {
       if (!drag) return;
       if (drag.mode === 'h' && drag.card) {
+        if (Math.abs(drag.dx) > 10) swallowClick = true;
         var w = screenEl.clientWidth;
         var commit = Math.abs(drag.dx) > w * 0.18;
         drag.card.style.transition = '';
