@@ -288,6 +288,17 @@
     var canvasH = 910;
     var api = {};
 
+    /* Motion system — each behavior rides its own flag so any one can be
+     * switched off to refine the others (set window.BOOK_MOTION before
+     * the runtime loads to override). */
+    var MOTION = global.BOOK_MOTION || { kenBurns: true, settle: true, parallax: true, haptics: true };
+    screenEl.classList.toggle('m-kb', !!MOTION.kenBurns);
+    screenEl.classList.toggle('m-settle', !!MOTION.settle);
+    screenEl.classList.toggle('m-par', !!MOTION.parallax);
+    function tick() {
+      if (MOTION.haptics && navigator.vibrate) { try { navigator.vibrate(6); } catch (e) {} }
+    }
+
     function rescale() {
       var s = screenEl.clientWidth / 640;
       /* screens taller than the loaded canvas get it centered; the card
@@ -307,6 +318,8 @@
       pageBar.style.left = (current * 100 / total) + '%';
       prevBtn.hidden = current === 0;
       nextBtn.hidden = current === total - 1;
+      /* the current card carries the Ken Burns drift */
+      cards.forEach(function (c, i) { c.classList.toggle('current', i === current); });
       /* Chameleon chrome: browsers reserve top/bottom bands (status bar,
        * toolbar) and tint them from theme-color / the page background.
        * Painting both with the current card's color makes the book bleed
@@ -326,7 +339,7 @@
       if (animating) return;
       var next = current + dir;
       if (next < 0 || next >= total) return;
-      animating = true; current = next; update();
+      animating = true; current = next; tick(); update();
       setTimeout(function () { animating = false; }, 420);
     }
 
@@ -394,6 +407,7 @@
         drag.mode = 'h'; drag.fwd = dx < 0;
         if (!drag.fwd && current === 0) { drag = null; return; }
         drag.card = drag.fwd ? cards[current] : cards[current - 1];
+        drag.card.classList.add('is-dragging');
         drag.card.style.transition = 'none';
         var f0 = drag.card.querySelector('.fold');
         if (f0) f0.style.transition = 'none';
@@ -408,6 +422,8 @@
         rot = Math.min(0, Math.max(-90, -90 + dx / w * 110));
       }
       drag.card.style.transform = 'rotateY(' + rot + 'deg)';
+      /* type lags the photo a touch — depth while the page turns */
+      drag.card.style.setProperty('--par', Math.round(dx * 0.07) + 'px');
       var fd = drag.card.querySelector('.fold');
       if (fd) fd.style.opacity = String(Math.min(1, -rot / 90));
       drag.dx = dx;
@@ -421,9 +437,12 @@
         var fd = drag.card.querySelector('.fold');
         if (fd) { fd.style.transition = ''; fd.style.opacity = ''; }
         drag.card.style.transform = '';
+        drag.card.style.removeProperty('--par');
+        drag.card.classList.remove('is-dragging');
         if (commit) {
           if (drag.fwd && current < total - 1) current += 1;
           else if (!drag.fwd && current > 0) current -= 1;
+          tick();
         }
         update();
       }
