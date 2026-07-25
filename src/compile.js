@@ -28,36 +28,62 @@
   function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
 
   var MONT = "'Montserrat', sans-serif", SLAB = "'Josefin Slab', Georgia, serif", OPEN = "'Open Sans', sans-serif";
+  var FRAUNCES = "'Fraunces', Georgia, serif";
   var WHITE = 'rgba(253,254,255,1)';
 
-  function center(top, size, family, opts) {
+  /* ---------- the type ramp ----------
+   * Every size on a page comes from this scale: Fraunces carries display
+   * and titles, Montserrat small tracked caps carries labels, Josefin
+   * Slab carries reading text. fitFont shrinks a step for long copy but
+   * always starts from a ramp value. */
+  var RAMP = {
+    display: 76,  // cover title
+    title: 54,    // card titles
+    gtitle: 44,   // gallery item titles
+    quote: 30,    // quote lines
+    body: 27,     // prose body
+    small: 24,    // gallery/video body
+    kicker: 15,   // tracked caps labels
+    caption: 13   // attributions, gallery kickers
+  };
+
+  function typo(top, size, family, opts) {
     opts = opts || {};
-    return {
+    var css = {
       position: 'absolute', top: top + 'px', left: (opts.left != null ? opts.left : 0) + 'px',
       width: (opts.width != null ? opts.width : 640) + 'px',
-      'text-align': 'center', color: WHITE, 'font-family': family,
+      'text-align': opts.align || 'center', color: WHITE, 'font-family': family,
       'font-size': size + 'px', 'line-height': String(opts.lh || 1.1),
       'padding-top': '10px', 'padding-bottom': '10px', 'z-index': '10'
     };
+    if (opts.weight) css['font-weight'] = String(opts.weight);
+    if (opts.ls) css['letter-spacing'] = opts.ls;
+    if (opts.caps) css['text-transform'] = 'uppercase';
+    return css;
+  }
+  function ext(a, b) {
+    var o = {}, key;
+    for (key in a) o[key] = a[key];
+    for (key in b) o[key] = b[key];
+    return o;
   }
   /* Card background for full-bleed image cards: a deep tone of the image's
    * primary hue, so the screen-fill area on tall phones blends with the
-   * image instead of showing white bars. */
+   * image instead of showing hard seams. */
   function inkBg(image) {
     return 'hsl(' + num(image && image.h1, 220) + ', 30%, 10%)';
   }
 
-  /* ---------- the adaptive canvas ----------
+  /* ---------- the adaptive canvas + model art direction ----------
    * Layouts are anchored bands, not fixed coordinates. The logical canvas
-   * is 640 wide and H tall, where H follows the viewer's screen aspect
-   * (910 on the classic 0.70 frame, up to 1390 on a modern tall phone).
-   * The band values (30px cover inset, headline 320 above the bottom,
-   * gallery text 355/295/210 above the bottom, ...) preserve the design
-   * language reverse-engineered from real wrap.co examples at H = 910:
+   * is 640 wide and H tall (910 classic, up to 1390 on a tall phone).
    *   top(y)  — fixed distance from the top edge
    *   mid(y)  — the element group stays optically centered
    *   bot(y)  — fixed distance from the bottom edge (y as designed at 910)
-   */
+   * The model may art-direct each card with layout {band, align, scale}:
+   * band picks which anchor the text cluster hangs from, align switches
+   * the column, scale steps the title along the ramp. Null means the
+   * classic default for that card type. */
   function compileCard(c, H, idx) {
     var k = [];
     var t = c.type;
@@ -69,33 +95,45 @@
     function bot(y) { return y + botShift; }
     var FULL = { position: 'absolute', top: '0px', left: '0px', width: '640px', height: H + 'px' };
 
+    var L = c.layout || {};
+    var scaleMul = L.scale === 'loud' ? 1.2 : L.scale === 'quiet' ? 0.82 : 1;
+    var aOpts = L.align === 'left' ? { align: 'left', left: 44, width: 552 } : {};
+    /* bands: designed-at-910 cluster origins per band; d = the default band */
+    function origin(bands) {
+      var band = L.band || bands.d;
+      var y = bands[band] != null ? bands[band] : bands[bands.d];
+      return band === 'top' ? y : band === 'middle' ? mid(y) : bot(y);
+    }
+
     if (t === 'cover') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'gradation', css: FULL });
-      var tsize = fitFont(title, 80, 12);
-      k.push(tb(escapeHtml(title), center(bot(590) + (80 - tsize), tsize, MONT, { left: 31, width: 580, lh: 1.02 })));
-      if (kicker) k.push(tb(escapeHtml(kicker), center(bot(700), fitFont(kicker, 40, 26), SLAB, { left: 30, width: 580 })));
+      var dsize = Math.round(RAMP.display * scaleMul);
+      var tsize = fitFont(title, dsize, 12);
+      var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
+      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550 }, aOpts))));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'quote') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
-      k.push({ t: 'outline', css: FULL });
       var lines = (c.lines || []).map(escapeHtml);
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
-      var qtop = title ? 250 : 200;
-      if (title) k.push(tb(escapeHtml(title), center(mid(120), fitFont(title, 64, 14), MONT)));
+      var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
+      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550 }, aOpts))));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        center(mid(qtop), lines.length > 10 ? 26 : 30, SLAB, { left: 80, width: 480, lh: 1.5 })));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'prose') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
-      k.push({ t: 'gradation', css: FULL });
-      if (kicker) k.push(tb(escapeHtml(kicker), center(mid(150), fitFont(kicker, 34, 26), SLAB)));
-      k.push(tb(escapeHtml(title), center(mid(kicker ? 215 : 170), fitFont(title, 60, 16), MONT, { left: 30, width: 580, lh: 1.05 })));
-      k.push(tb(escapeHtml(body), center(mid(kicker ? 360 : 320), body.length > 330 ? 26 : 30, SLAB, { left: 60, width: 520, lh: 1.45 })));
+      var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
+      var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550 }, aOpts))));
+      k.push(tb(escapeHtml(body), typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'gallery') {
@@ -103,10 +141,10 @@
         var ik = [];
         ik.push(img(FULL, it.image, slot + '.' + j));
         ik.push({ t: 'gradation', css: FULL });
-        if (it.kicker) ik.push(tb(escapeHtml(it.kicker), center(bot(555), fitFont(it.kicker, 38, 26), SLAB, { left: 30, width: 580 })));
-        var isize = fitFont(it.title || '', 60, 15);
-        ik.push(tb(escapeHtml(it.title || ''), center(bot(615) + (60 - isize), isize, MONT)));
-        ik.push(tb(escapeHtml(it.body || ''), center(bot(700), 26, SLAB, { left: 45, width: 550, lh: 1.35 })));
+        if (it.kicker) ik.push(tb(escapeHtml(it.kicker), typo(bot(555), RAMP.caption, MONT, { ls: '0.3em', caps: 1, left: 30, width: 580 })));
+        var isize = fitFont(it.title || '', RAMP.gtitle, 15);
+        ik.push(tb(escapeHtml(it.title || ''), typo(bot(615) + (RAMP.gtitle - isize), isize, FRAUNCES, { weight: 550 })));
+        ik.push(tb(escapeHtml(it.body || ''), typo(bot(700), RAMP.small, SLAB, { left: 45, width: 550, lh: 1.4 })));
         return { k: ik };
       });
       return { bg: inkBg(c.items && c.items[0] && c.items[0].image), k: [{ t: 'gallery', k: items }] };
@@ -114,17 +152,19 @@
     if (t === 'product') {
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'gradation', css: FULL });
-      if (kicker) k.push(tb(escapeHtml(kicker), center(bot(540), fitFont(kicker, 34, 26), SLAB)));
-      k.push(tb(escapeHtml(title), center(bot(600), fitFont(title, 50, 18), MONT, { left: 30, width: 580 })));
+      var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
+      var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
       var pbody = escapeHtml(body) + (c.price ? ' <b>' + escapeHtml(c.price) + '</b>' : '');
-      k.push(tb(pbody, center(bot(680), 26, SLAB, { left: 60, width: 520, lh: 1.35 })));
+      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
       if (c.button) {
         k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
-          position: 'absolute', top: bot(800) + 'px', left: '100px', width: '440px', height: '68px',
+          position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
           color: '#fff', border: '3px solid #fff', 'font-family': OPEN, 'font-size': '24px',
           'letter-spacing': '0.08em', 'z-index': '20'
         }});
-        k.push({ t: 'action', url: c.url || '', css: { position: 'absolute', top: bot(796) + 'px', left: '97px', width: '446px', height: '76px' } });
+        k.push({ t: 'action', url: c.url || '', css: { position: 'absolute', top: (prO + 248) + 'px', left: '97px', width: '446px', height: '76px' } });
       }
       return { bg: inkBg(c.image), k: k };
     }
@@ -132,13 +172,14 @@
       k.push(img(FULL, c.image, slot));
       k.push({ t: 'veil', css: FULL });
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
-      if (title) k.push(tb(escapeHtml(title), center(bot(560), fitFont(title, 50, 18), MONT, { left: 30, width: 580 })));
-      if (body) k.push(tb(escapeHtml(body), center(bot(650), 26, SLAB, { left: 60, width: 520, lh: 1.35 })));
+      var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
+      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550 }, aOpts))));
+      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4 }, aOpts))));
       return { bg: inkBg(c.image), k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
-      if (title) k.push(tb(escapeHtml(title), center(70, fitFont(title, 56, 16), MONT)));
+      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550 })));
       return { bg: '#161718', k: k };
     }
     return null;
@@ -177,7 +218,8 @@
         image: { h1: 210, h2: 250, label: 'lighthouse at dusk' } },
       { type: 'prose', kicker: 'June', title: 'The Arrival',
         body: 'The ferry only runs twice a week, so when I stepped onto the dock with two suitcases and a typewriter, I knew there was no changing my mind. The keeper’s cottage smelled of salt and cedar.',
-        image: { h1: 195, h2: 220, label: 'ferry crossing gray water' } },
+        layout: { band: 'bottom', align: 'left', scale: 'standard' },
+        image: { h1: 195, h2: 220, label: 'ferry crossing gray water at dawn' } },
       { type: 'gallery', items: [
         { kicker: 'Week One', title: 'The Light', body: 'Forty-two steps up. I counted them every night at eight, and every night the sea looked different.',
           image: { h1: 45, h2: 25, label: 'lamp room at golden hour' } },
@@ -189,6 +231,7 @@
       { type: 'quote',
         lines: ['The sea does not reward', 'those who are too anxious,', 'too greedy, or too impatient.', 'Patience, patience, patience,', 'is what the sea teaches.'],
         attribution: 'Anne Morrow Lindbergh',
+        layout: { band: 'middle', align: 'center', scale: 'quiet' },
         image: { h1: 250, h2: 290, label: 'night sea under stars' } },
       { type: 'map', title: 'WREN ISLAND', address: 'Wren Island Lighthouse, San Juan Islands, WA' }
     ]
