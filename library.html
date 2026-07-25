@@ -199,6 +199,9 @@ body { margin: 0; background: #000; }
 }
 
 
+  /* the browser's top/bottom bands show html/body — paint them ink so
+     the page bleeds edge to edge */
+  html, body { background: var(--ink); }
   /* The gallery is a normal document page, not a fixed player stage. */
   body { background: var(--ink); overflow-y: auto; }
   .page {
@@ -338,7 +341,7 @@ body { margin: 0; background: #000; }
     </div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.1</span>
+      <span>Set in Fraunces · v0.0.2</span>
       <span><a href="./">Compose</a></span>
     </footer>
   </div>
