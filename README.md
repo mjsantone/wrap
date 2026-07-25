@@ -77,6 +77,10 @@ python3 build.py          # writes the root pages
 python3 build.py --check  # what CI runs: fails if outputs are stale
 ```
 
+`VERSION` holds the deploy stamp shown in the page footers (`v0.0.x`) —
+bump it with every pushed change so the deployed site says which build
+it is.
+
 | Source | What it is |
 | --- | --- |
 | `src/runtime.js` | `BookRuntime` — the renderer, the flip engine, and the adaptive-canvas math |
