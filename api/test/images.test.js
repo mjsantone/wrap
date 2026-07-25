@@ -143,6 +143,20 @@ test('generateImage error mapping: not configured / 429 / content policy / empty
   );
 });
 
+test('generateImage lets the caller raise quality (cover tier)', async () => {
+  const env = { OPENAI_API_KEY: 'sk-x' };
+  await images.generateImage('cover scene', {
+    env, quality: 'high',
+    fetch: fetchStub(200, { data: [{ b64_json: 'eA==' }] }),
+  });
+  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'high');
+  await images.generateImage('interior scene', {
+    env,
+    fetch: fetchStub(200, { data: [{ b64_json: 'eA==' }] }),
+  });
+  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'medium');
+});
+
 test('generateImage maps an aborted request to TIMEOUT', async () => {
   const env = { OPENAI_API_KEY: 'sk-x' };
   await assert.rejects(

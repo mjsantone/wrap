@@ -280,6 +280,9 @@ html, body { overscroll-behavior: none; }
     display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px;
   }
   .tile { display: block; text-decoration: none; color: var(--paper); }
+  /* the newest book leads the shelf, magazine-rack style */
+  .tile.featured { grid-column: span 2; }
+  .tile.featured .tile-title { font-size: 22px; }
   .thumb {
     position: relative; aspect-ratio: 640 / 910; overflow: hidden;
     background: #1a191d; border: 1px solid rgba(244,241,234,0.14); border-radius: 2px;
@@ -378,7 +381,7 @@ html, body { overscroll-behavior: none; }
     </div>
 
     <footer class="footer">
-      <span>Set in Fraunces · v0.0.8</span>
+      <span>Set in Fraunces · v0.0.9</span>
       <span><a href="./">Compose</a></span>
     </footer>
   </div>
@@ -1319,9 +1322,11 @@ html, body { overscroll-behavior: none; }
     var data = await res.json();
 
     loadingBox.hidden = true;
-    (data.books || []).forEach(function (entry) {
+    (data.books || []).forEach(function (entry, i) {
       var t = tile(entry);
-      if (t) shelf.appendChild(t);
+      if (!t) return;
+      if (offset === 0 && i === 0) t.className += ' featured';
+      shelf.appendChild(t);
     });
     rescale();
     offset += (data.books || []).length;

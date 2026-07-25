@@ -50,13 +50,13 @@ function providerConfig(env) {
   return null;
 }
 
-function requestBody(cfg, prompt, env) {
+function requestBody(cfg, prompt, env, quality) {
   env = env || process.env;
   const body = {
     prompt,
     n: 1,
     size: IMAGE_SIZE,
-    quality: env.IMAGE_QUALITY || 'medium',
+    quality: quality || env.IMAGE_QUALITY || 'medium',
     output_format: 'webp',
     output_compression: 80,
   };
@@ -151,7 +151,8 @@ function buildPrompt(story, slot) {
 
 /* ---------- generation ---------- */
 
-/* deps (tests): { env, fetch }. Resolves { data: base64, contentType }. */
+/* deps: { env, fetch, quality } — quality lets the cover render a step
+ * above the interior pages. Resolves { data: base64, contentType }. */
 async function generateImage(prompt, deps) {
   const env = (deps && deps.env) || process.env;
   const cfg = providerConfig(env);
@@ -166,7 +167,7 @@ async function generateImage(prompt, deps) {
     res = await doFetch(cfg.url, {
       method: 'POST',
       headers: cfg.headers,
-      body: JSON.stringify(requestBody(cfg, prompt, env)),
+      body: JSON.stringify(requestBody(cfg, prompt, env, deps && deps.quality)),
       signal: AbortSignal.timeout(Number(env.IMAGE_TIMEOUT_MS || 40000)),
     });
   } catch (err) {

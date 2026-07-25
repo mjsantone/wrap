@@ -2,7 +2,7 @@
   "routes": [
     {
       "route": "/b/*",
-      "rewrite": "/b.html"
+      "rewrite": "/api/bpage"
     },
     {
       "route": "/library",
