@@ -93,7 +93,7 @@ test('requestBody: portrait webp, model only for the direct API', () => {
   const body = images.requestBody(openai, 'a scene', {});
   assert.equal(body.size, '1024x1536');
   assert.equal(body.output_format, 'webp');
-  assert.equal(body.quality, 'medium');
+  assert.equal(body.quality, 'low'); // the default must fit the ~45s response cap
   assert.equal(body.model, 'gpt-image-1');
   assert.equal(body.n, 1);
 
@@ -154,7 +154,7 @@ test('generateImage lets the caller raise quality (cover tier)', async () => {
     env,
     fetch: fetchStub(200, { data: [{ b64_json: 'eA==' }] }),
   });
-  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'medium');
+  assert.equal(JSON.parse(fetchStub.last.opts.body).quality, 'low');
 });
 
 test('generateImage maps an aborted request to TIMEOUT', async () => {
