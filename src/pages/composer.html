@@ -116,11 +116,47 @@
     padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
   }
   .back-btn:hover, .back-btn:focus-visible { opacity: 1; }
+  /* desktop: the chrome container is transparent — pills sit in the corners */
+  .chrome { display: contents; }
   .pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
   .pv-actions .back-btn { position: static; }
+  .chrome-toggle { display: none; }
+
+  /* phones: actions live in a pull-up sheet behind a ⋯ handle */
+  @media (max-width: 640px), (hover: none) and (pointer: coarse) {
+    .chrome {
+      display: flex; flex-direction: column; gap: 10px;
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 1022;
+      background: #101114;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+      padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
+      transform: translateY(105%); transition: transform 0.25s ease;
+    }
+    .chrome::before { /* grab bar */
+      content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
+    }
+    .chrome.open { transform: translateY(0); }
+    .chrome .back-btn, .pv-actions .back-btn {
+      position: static; width: 100%; opacity: 1;
+      background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;
+      border-radius: 10px;
+    }
+    .pv-actions { position: static; display: contents; }
+    .chrome #backBtn { order: 4; background: none; color: var(--muted); }
+    /* the toast must clear the ⋯ handle (specificity beats the later base rule) */
+    .screen .share-toast { bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .chrome-toggle {
+      display: block; position: absolute; z-index: 1021;
+      bottom: calc(14px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+      font-size: 22px; line-height: 1; padding: 6px 22px 12px; cursor: pointer; opacity: 0.65;
+    }
+  }
   .share-toast {
     position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
-    z-index: 1015; max-width: 88%;
+    z-index: 1030; max-width: 88%; /* transient — wins over all player chrome */
     background: rgba(0,0,0,0.8); color: #fff; border-radius: 10px;
     font-family: 'Open Sans', sans-serif; font-size: 13px; line-height: 1.5;
     padding: 10px 16px; text-align: center; overflow-wrap: anywhere;
@@ -208,12 +244,15 @@
 
     <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
 
-    <button class="back-btn" id="backBtn">← New story</button>
-    <div class="pv-actions">
-      <button class="back-btn" id="shareBtn">🔗 Share</button>
-      <button class="back-btn" id="libBtn">＋ Library</button>
-      <button class="back-btn" id="regenBtn">↻ Regenerate</button>
+    <div class="chrome" id="chromeBar">
+      <button class="back-btn" id="backBtn">← New story</button>
+      <div class="pv-actions">
+        <button class="back-btn" id="shareBtn">🔗 Share</button>
+        <button class="back-btn" id="libBtn">＋ Library</button>
+        <button class="back-btn" id="regenBtn">↻ Regenerate</button>
+      </div>
     </div>
+    <button class="chrome-toggle" id="chromeToggle" aria-label="Book actions">⋯</button>
     <div class="share-toast" id="shareToast" hidden></div>
   </div>
 </div>
@@ -295,6 +334,15 @@
     playerStage.hidden = true;
     homeView.classList.remove('hidden');
   }
+  /* phone action sheet: the ⋯ handle pulls the actions up; using one closes it */
+  var chromeBar = document.getElementById('chromeBar');
+  document.getElementById('chromeToggle').addEventListener('click', function () {
+    chromeBar.classList.toggle('open');
+  });
+  chromeBar.addEventListener('click', function (e) {
+    if (e.target.closest('button')) chromeBar.classList.remove('open');
+  });
+
   document.getElementById('backBtn').addEventListener('click', showHome);
   document.getElementById('regenBtn').addEventListener('click', function () {
     showHome();
