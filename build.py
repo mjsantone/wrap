@@ -45,6 +45,10 @@ def build_page(src: str) -> str:
             break
     else:
         sys.exit(f"error: {src} did not stabilize — inline cycle?")
+    # Deploy stamp: bump VERSION with every pushed change so the deployed
+    # site says which build it is.
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    text = text.replace("@BOOKVERSION@", version)
     return HEADER.format(src=src) + text
 
 
