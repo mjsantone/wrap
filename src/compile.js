@@ -139,10 +139,15 @@
    * band picks which anchor the text cluster hangs from, align switches
    * the column, scale steps the title along the ramp. Null means the
    * classic default for that card type. */
-  function compileCard(c, H, idx, seed) {
+  function compileCard(c, H, idx, seed, inkHue) {
     var k = [];
     var t = c.type;
     var slot = String(idx);
+    /* pic null → a type-only ink page: no photograph, no scrim, the type
+     * sits on deep ink in the hue of the last photographed page so the
+     * book stays one color story */
+    var pic = c.image || null;
+    var ink = 'hsl(' + (inkHue == null ? 220 : inkHue) + ', 26%, 11%)';
     var title = smarten(c.title), body = smarten(c.body), kicker = smarten(c.kicker);
     var midShift = Math.round((H - 910) / 2);
     var botShift = H - 910;
@@ -162,40 +167,48 @@
     }
 
     if (t === 'cover') {
-      k.push(img(FULL, c.image, slot));
-      k.push({ t: 'gradation', css: FULL });
+      if (pic) {
+        k.push(img(FULL, pic, slot));
+        k.push({ t: 'gradation', css: FULL });
+      }
       var dsize = Math.round(RAMP.display * scaleMul);
       var tsize = fitFont(title, dsize, 12);
       var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
       k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts))));
       if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
-      return { bg: inkBg(c.image), k: k };
+      return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'quote') {
-      k.push(img(FULL, c.image, slot));
-      k.push({ t: 'veil', css: FULL });
+      if (pic) {
+        k.push(img(FULL, pic, slot));
+        k.push({ t: 'veil', css: FULL });
+      }
       var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
       if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
         typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
-      return { bg: inkBg(c.image), k: k };
+      return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'prose') {
-      k.push(img(FULL, c.image, slot));
-      k.push({ t: 'veil', css: FULL });
+      if (pic) {
+        k.push(img(FULL, pic, slot));
+        k.push({ t: 'veil', css: FULL });
+      }
       var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
       k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
         typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts))));
-      return { bg: inkBg(c.image), k: k };
+      return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'product') {
-      k.push(img(FULL, c.image, slot));
-      k.push({ t: 'gradation', css: FULL });
+      if (pic) {
+        k.push(img(FULL, pic, slot));
+        k.push({ t: 'gradation', css: FULL });
+      }
       var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
       var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
       if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
@@ -210,16 +223,18 @@
         }});
         k.push({ t: 'action', url: c.url || '', css: { position: 'absolute', top: (prO + 248) + 'px', left: '97px', width: '446px', height: '76px' } });
       }
-      return { bg: inkBg(c.image), k: k };
+      return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'video') {
-      k.push(img(FULL, c.image, slot));
-      k.push({ t: 'veil', css: FULL });
+      if (pic) {
+        k.push(img(FULL, pic, slot));
+        k.push({ t: 'veil', css: FULL });
+      }
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
       if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
       if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
-      return { bg: inkBg(c.image), k: k };
+      return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
@@ -254,6 +269,7 @@
   function compileBook(story, opts) {
     var H = (opts && opts.height) || 910;
     var seed = seedOf(story.name);
+    var inkHue = 220; /* type-only pages borrow the last photographed hue */
     var out = { name: smarten(story.name) || 'Untitled', height: H, date: (opts && opts.date) || null, cards: [] };
     (story.cards || []).forEach(function (c, i) {
       c = c || {};
@@ -263,7 +279,8 @@
         });
         return;
       }
-      var compiled = compileCard(c, H, i, seed);
+      if (c.image) inkHue = num(c.image.h1, inkHue);
+      var compiled = compileCard(c, H, i, seed, inkHue);
       if (compiled) out.cards.push(compiled);
     });
     // end-of-book card, always appended
@@ -303,7 +320,7 @@
         lines: ['The sea does not reward', 'those who are too anxious,', 'too greedy, or too impatient.', 'Patience, patience, patience,', 'is what the sea teaches.'],
         attribution: 'Anne Morrow Lindbergh',
         layout: { band: 'middle', align: 'center', scale: 'quiet' },
-        image: { h1: 250, h2: 290, label: 'night sea under stars' } },
+        image: null },
       { type: 'map', title: 'WREN ISLAND', address: 'Wren Island Lighthouse, San Juan Islands, WA' }
     ]
   };
