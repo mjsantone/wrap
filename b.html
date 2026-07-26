@@ -237,15 +237,76 @@ html, body { overscroll-behavior: none; }
   .card.animate-swipe-hint, .gallery-hint { animation: none; }
 }
 
+/* Player chrome shared by the composer and the viewer: corner pills on
+ * desktop, a swipe-up pull-up action sheet on phones. Each page provides
+ * a .chrome bar (with .back-btn actions, the muted one marked .quiet),
+ * plus a .share-toast; the sheet gestures live in each page's script. */
+.back-btn {
+  position: absolute; top: 10px; left: 10px; z-index: 1010;
+  background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+  font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
+  padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+  text-decoration: none; text-align: center;
+}
+.back-btn:hover, .back-btn:focus-visible { opacity: 1; }
+/* desktop: the chrome container is transparent — pills sit in the corners */
+.chrome { display: contents; }
+.pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
+.pv-actions .back-btn { position: static; }
 
-  .make-btn {
-    position: absolute; top: 10px; left: 10px; z-index: 1010;
-    background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
-    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
-    padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
-    text-decoration: none;
+/* phones: actions live in a pull-up sheet — swipe up on the book to open */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  /* open sheet: the book recedes — scaled, dimmed, rounded like a card */
+  .card-container { transition: transform 0.28s ease, filter 0.28s ease, border-radius 0.28s ease; }
+  .screen.sheet-open .card-container {
+    transform: scale(0.93);
+    transform-origin: 50% 40%;
+    filter: brightness(0.5) saturate(0.9);
+    border-radius: 20px; overflow: hidden;
   }
-  .make-btn:hover, .make-btn:focus-visible { opacity: 1; }
+  .chrome {
+    touch-action: none; /* we handle vertical drags — stop browser panning */
+    display: flex; flex-direction: column; gap: 10px;
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 1022;
+    background: #101114;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+    padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform 0.25s ease;
+  }
+  .chrome::before { /* grab bar */
+    content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
+  }
+  .chrome.open { transform: translateY(0); }
+  .chrome .back-btn, .pv-actions .back-btn {
+    position: static; width: 100%; opacity: 1;
+    background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;
+    border-radius: 10px;
+  }
+  .pv-actions { position: static; display: contents; }
+  .chrome .quiet { order: 4; background: none; color: var(--muted, #8a8d94); }
+  /* the toast clears the home-indicator area (specificity beats the later base rule) */
+  .screen .share-toast { bottom: calc(26px + env(safe-area-inset-bottom)); }
+}
+.share-toast {
+  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  z-index: 1030; max-width: 88%; /* transient — wins over all player chrome */
+  background: rgba(0,0,0,0.8); color: #fff; border-radius: 10px;
+  font-family: 'Open Sans', sans-serif; font-size: 13px; line-height: 1.5;
+  padding: 10px 16px; text-align: center; overflow-wrap: anywhere;
+}
+.share-toast[hidden] { display: none; }
+.share-toast a { color: var(--accent, #ff5a36); text-decoration: none; }
+.share-toast button {
+  margin-left: 10px; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  background: var(--accent, #ff5a36); color: var(--ink, #100F12); border: none; border-radius: 2px;
+  padding: 7px 12px;
+}
+.share-toast button:disabled { opacity: 0.5; cursor: default; }
+
 
   /* loading / error states fill the screen before a book arrives */
   .state {
@@ -292,7 +353,15 @@ html, body { overscroll-behavior: none; }
 
     <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
 
-    <a class="make-btn" href="/">✦ Make your own</a>
+    <div class="chrome" id="chromeBar">
+      <a class="back-btn" id="makeBtn" href="/">✦ Make your own</a>
+      <div class="pv-actions">
+        <button class="back-btn" id="shareBtn">🔗 Share</button>
+        <button class="back-btn" id="libBtn">＋ Library</button>
+        <a class="back-btn quiet" id="libraryBtn" href="/library">Library</a>
+      </div>
+    </div>
+    <div class="share-toast" id="shareToast" hidden></div>
 
     <div class="state" id="stateBox">
       <h1 class="wordmark">BOOK<b>.</b></h1>
@@ -301,7 +370,7 @@ html, body { overscroll-behavior: none; }
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
-      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.18</p>
+      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.19</p>
     </div>
   </div>
 </div>
@@ -1240,6 +1309,27 @@ html, body { overscroll-behavior: none; }
   var stateMsg = document.getElementById('stateMsg');
   var stateSpinner = document.getElementById('stateSpinner');
 
+  /* ---------- player chrome: same pull-up sheet as the composer ---------- */
+  var chromeBar = document.getElementById('chromeBar');
+  var screenNode = document.getElementById('screen');
+  var shareToast = document.getElementById('shareToast');
+  var lastPageSeen = -1;
+  function isPhone() {
+    return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
+  }
+  function setSheet(open) {
+    chromeBar.classList.toggle('open', open);
+    /* the book pushes back and locks while the sheet is up */
+    screenNode.classList.toggle('sheet-open', open);
+  }
+  var toastTimer = null;
+  function toast(html, sticky) {
+    shareToast.innerHTML = html;
+    shareToast.hidden = false;
+    clearTimeout(toastTimer);
+    if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
+  }
+
   var player = BookRuntime.createPlayer({
     screen: document.getElementById('screen'),
     container: document.getElementById('cardContainer'),
@@ -1248,10 +1338,66 @@ html, body { overscroll-behavior: none; }
     pageBar: document.getElementById('pageBar'),
     tapLeft: document.getElementById('tapLeft'),
     tapRight: document.getElementById('tapRight'),
-    keyGate: function () { return stateBox.hidden; },
+    keyGate: function () { return stateBox.hidden && !chromeBar.classList.contains('open'); },
     dragGate: function () { return stateBox.hidden; },
+    /* swipe up anywhere on the book to pull the action sheet up */
+    onSwipeUp: function () { if (isPhone()) setSheet(true); },
+    /* the sheet presents itself on the last page — the share moment */
+    onPage: function (i, n) {
+      if (i === n - 1 && i !== lastPageSeen && isPhone()) setSheet(true);
+      lastPageSeen = i;
+    },
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
+
+  /* using an action closes the sheet; the dimmed book is a scrim */
+  chromeBar.addEventListener('click', function (e) {
+    if (e.target.closest('button') || e.target.closest('a')) setSheet(false);
+  });
+  var scrimDismissed = false;
+  screenNode.addEventListener('pointerdown', function (e) {
+    scrimDismissed = false;
+    if (!chromeBar.classList.contains('open')) return;
+    if (e.target.closest('.chrome')) return;
+    setSheet(false);
+    scrimDismissed = true;
+    e.stopPropagation(); /* the player never sees it — no flip, no drag */
+  }, true);
+  screenNode.addEventListener('click', function (e) {
+    if (scrimDismissed) {
+      scrimDismissed = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
+  /* drag the open sheet down to dismiss */
+  var sheetDrag = null;
+  chromeBar.addEventListener('pointerdown', function (e) {
+    if (chromeBar.classList.contains('open')) sheetDrag = { y: e.clientY, moved: false };
+  });
+  chromeBar.addEventListener('pointermove', function (e) {
+    if (!sheetDrag) return;
+    var dy = e.clientY - sheetDrag.y;
+    if (dy > 6 && !sheetDrag.moved) {
+      sheetDrag.moved = true;
+      /* capture so the drag survives crossing overlays (e.g. the toast) */
+      try { chromeBar.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (sheetDrag.moved) {
+      chromeBar.style.transition = 'none';
+      chromeBar.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
+    }
+  });
+  function endSheetDrag(e) {
+    if (!sheetDrag) return;
+    var dy = e.clientY - sheetDrag.y;
+    chromeBar.style.transition = '';
+    chromeBar.style.transform = '';
+    if (sheetDrag.moved && dy > 55) setSheet(false);
+    sheetDrag = null;
+  }
+  chromeBar.addEventListener('pointerup', endSheetDrag);
+  chromeBar.addEventListener('pointercancel', endSheetDrag);
 
   function fail(msg) {
     stateSpinner.hidden = true;
@@ -1261,6 +1407,37 @@ html, body { overscroll-behavior: none; }
   /* id from the /b/{id} rewrite path, with ?id= as a fallback */
   var m = location.pathname.match(/\/b\/([1-9A-HJ-NP-Za-km-z]{8,24})/);
   var id = (m && m[1]) || new URLSearchParams(location.search).get('id');
+
+  /* ---------- sheet actions ---------- */
+  var realId = m && m[1] ? m[1] : (id && id !== 'sample' ? id : null);
+  var libBtn = document.getElementById('libBtn');
+  libBtn.hidden = !realId; /* the sample can't be re-published */
+
+  document.getElementById('shareBtn').addEventListener('click', async function () {
+    var link = realId ? location.origin + '/b/' + realId : location.href;
+    var safe = BookRuntime.escapeHtml(link);
+    var copied = false;
+    try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
+    toast((copied ? 'Link copied — ' : 'This book lives at ') +
+      '<a href="' + safe + '" target="_blank" rel="noopener noreferrer">' + safe + '</a>', true);
+  });
+
+  /* ＋ Library: the book is already stored — publishing shelves it */
+  libBtn.addEventListener('click', async function () {
+    if (!realId) return;
+    libBtn.disabled = true;
+    try {
+      var res = await fetch('/api/books/' + encodeURIComponent(realId) + '/publish', { method: 'POST' });
+      var data = null;
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      toast('On the shelf — <a href="/library">see the library →</a>', true);
+    } catch (e) {
+      toast('Couldn’t add it to the library' + (e && e.message ? ': ' + BookRuntime.escapeHtml(e.message) : ''));
+    } finally {
+      libBtn.disabled = false;
+    }
+  });
 
   /* the built-in sample — the library's seed book, played without the API */
   if (id === 'sample' || /\/b\/sample$/.test(location.pathname)) {
