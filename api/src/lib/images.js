@@ -139,20 +139,23 @@ const BAND_SPACE = {
   bottom: 'Compose with the lower third calm and uncluttered — the page title sits there.',
 };
 
+/* The book's title must NOT appear in the prompt: image models paint
+ * quoted strings as lettering on the page, "no text" instruction or
+ * not. The scene label carries all the meaning the picture needs. */
 function buildPrompt(story, slot) {
   const holder = slot.item || slot.card;
   const image = holder.image || {};
   const scene = image.label || holder.title || slot.card.title || story.name || '';
   const mood = hueName(image.h1);
   return (
-    'An editorial photograph for a page of a small story book titled "' +
-    (story.name || 'Untitled') + '". Scene: ' + scene + '. ' +
+    'An editorial photograph for a page of a small story book. Scene: ' + scene + '. ' +
     'Vertical 2:3 composition, cinematic natural light, ' +
     (/^[aeiou]/.test(mood) ? 'an ' : 'a ') + mood +
     '-leaning palette, quiet and evocative, photographic realism. ' +
     BAND_SPACE[textBand(slot)] + ' ' +
     (story.style ? 'Photographic style for the whole book: ' + story.style + '. ' : '') +
-    'No text, no lettering, no borders, no watermarks.'
+    'No text anywhere in the frame: no lettering, no words, no typography, ' +
+    'no signage, no book covers or titles, no captions, no borders, no watermarks.'
   );
 }
 
