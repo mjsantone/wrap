@@ -43,12 +43,13 @@ test('patchPath builds the Cosmos partial-update path', () => {
   assert.equal(images.patchPath('nope'), null);
 });
 
-test('buildPrompt uses the slot label, book title, hue mood, and forbids text', () => {
+test('buildPrompt uses the slot label and hue mood, forbids text, omits the title', () => {
   const p = images.buildPrompt(STORY, images.findSlot(STORY, '2.0'));
   assert.match(p, /lamp room/);
-  assert.match(p, /The Lighthouse Summer/);
+  // the title must never reach the image model — it gets painted as lettering
+  assert.doesNotMatch(p, /The Lighthouse Summer/);
   assert.match(p, /an amber-leaning palette/); // h1 45 → amber
-  assert.match(p, /No text/);
+  assert.match(p, /No text anywhere/);
   assert.match(p, /2:3/);
 });
 
