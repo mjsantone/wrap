@@ -9,7 +9,7 @@
  *       AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_KEY
  *       (+ AZURE_OPENAI_IMAGE_DEPLOYMENT, default "gpt-image-1")
  *   - OpenAI direct (pay-per-image, works with any OpenAI key):
- *       OPENAI_API_KEY (+ OPENAI_IMAGE_MODEL, default "gpt-image-1")
+ *       OPENAI_API_KEY (+ OPENAI_IMAGE_MODEL, default "gpt-image-2")
  * Neither configured → NOT_CONFIGURED, and books keep their duotone
  * placeholders — there is no broken state.
  *
@@ -44,15 +44,16 @@ function providerConfig(env) {
       name: 'openai',
       url: 'https://api.openai.com/v1/images/generations',
       headers: { Authorization: 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
-      model: env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
+      model: env.OPENAI_IMAGE_MODEL || 'gpt-image-2',
     };
   }
   return null;
 }
 
 /* Quality is a latency budget, not just a fidelity knob: the SWA platform
- * severs responses at ~45s, and gpt-image-1 at this size typically runs
- * ~5–15s on low, ~30–70s on medium, 60s+ on high. Only low fits the cap
+ * severs responses at ~45s, and image models run seconds on low but tens
+ * of seconds to minutes on medium/high (gpt-image-2's high tier reasons
+ * before generating — 30-50x slower than low). Only low fits the cap
  * dependably, so interiors default there; the cover (the book's face)
  * gambles on medium — a timeout isn't fatal because every open of the
  * book retries missing slots. Raise IMAGE_QUALITY/IMAGE_QUALITY_COVER

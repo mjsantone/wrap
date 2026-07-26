@@ -84,7 +84,7 @@ test('providerConfig picks Azure over OpenAI, and null when neither', () => {
   assert.equal(openai.name, 'openai');
   assert.equal(openai.url, 'https://api.openai.com/v1/images/generations');
   assert.equal(openai.headers.Authorization, 'Bearer sk-x');
-  assert.equal(openai.model, 'gpt-image-1');
+  assert.equal(openai.model, 'gpt-image-2');
 
   assert.equal(images.providerConfig({}), null);
 });
@@ -95,7 +95,7 @@ test('requestBody: portrait webp, model only for the direct API', () => {
   assert.equal(body.size, '1024x1536');
   assert.equal(body.output_format, 'webp');
   assert.equal(body.quality, 'low'); // the default must fit the ~45s response cap
-  assert.equal(body.model, 'gpt-image-1');
+  assert.equal(body.model, 'gpt-image-2');
   assert.equal(body.n, 1);
 
   const azure = images.providerConfig({ AZURE_OPENAI_ENDPOINT: 'https://r.x', AZURE_OPENAI_KEY: 'k' });
