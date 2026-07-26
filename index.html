@@ -345,70 +345,76 @@ html, body { overscroll-behavior: none; }
   .footer a { color: var(--muted); text-decoration: none; }
   .footer a:hover { color: var(--accent); }
 
-  .back-btn {
-    position: absolute; top: 10px; left: 10px; z-index: 1010;
-    background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
-    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
-    padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
-  }
-  .back-btn:hover, .back-btn:focus-visible { opacity: 1; }
-  /* desktop: the chrome container is transparent — pills sit in the corners */
-  .chrome { display: contents; }
-  .pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
-  .pv-actions .back-btn { position: static; }
+/* Player chrome shared by the composer and the viewer: corner pills on
+ * desktop, a swipe-up pull-up action sheet on phones. Each page provides
+ * a .chrome bar (with .back-btn actions, the muted one marked .quiet),
+ * plus a .share-toast; the sheet gestures live in each page's script. */
+.back-btn {
+  position: absolute; top: 10px; left: 10px; z-index: 1010;
+  background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px;
+  font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em;
+  padding: 8px 14px; cursor: pointer; opacity: 0.55; transition: opacity 0.2s;
+  text-decoration: none; text-align: center;
+}
+.back-btn:hover, .back-btn:focus-visible { opacity: 1; }
+/* desktop: the chrome container is transparent — pills sit in the corners */
+.chrome { display: contents; }
+.pv-actions { position: absolute; top: 10px; right: 10px; z-index: 1010; display: flex; gap: 6px; }
+.pv-actions .back-btn { position: static; }
 
-  /* phones: actions live in a pull-up sheet — swipe up on the book to open */
-  @media (max-width: 640px), (hover: none) and (pointer: coarse) {
-    /* open sheet: the book recedes — scaled, dimmed, rounded like a card */
-    .card-container { transition: transform 0.28s ease, filter 0.28s ease, border-radius 0.28s ease; }
-    .screen.sheet-open .card-container {
-      transform: scale(0.93);
-      transform-origin: 50% 40%;
-      filter: brightness(0.5) saturate(0.9);
-      border-radius: 20px; overflow: hidden;
-    }
-    .chrome {
-      touch-action: none; /* we handle vertical drags — stop browser panning */
-      display: flex; flex-direction: column; gap: 10px;
-      position: absolute; left: 0; right: 0; bottom: 0; z-index: 1022;
-      background: #101114;
-      border-radius: 16px 16px 0 0;
-      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
-      padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
-      transform: translateY(105%); transition: transform 0.25s ease;
-    }
-    .chrome::before { /* grab bar */
-      content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
-    }
-    .chrome.open { transform: translateY(0); }
-    .chrome .back-btn, .pv-actions .back-btn {
-      position: static; width: 100%; opacity: 1;
-      background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;
-      border-radius: 10px;
-    }
-    .pv-actions { position: static; display: contents; }
-    .chrome #backBtn { order: 4; background: none; color: var(--muted); }
-    /* the toast clears the home-indicator area (specificity beats the later base rule) */
-    .screen .share-toast { bottom: calc(26px + env(safe-area-inset-bottom)); }
+/* phones: actions live in a pull-up sheet — swipe up on the book to open */
+@media (max-width: 640px), (hover: none) and (pointer: coarse) {
+  /* open sheet: the book recedes — scaled, dimmed, rounded like a card */
+  .card-container { transition: transform 0.28s ease, filter 0.28s ease, border-radius 0.28s ease; }
+  .screen.sheet-open .card-container {
+    transform: scale(0.93);
+    transform-origin: 50% 40%;
+    filter: brightness(0.5) saturate(0.9);
+    border-radius: 20px; overflow: hidden;
   }
-  .share-toast {
-    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
-    z-index: 1030; max-width: 88%; /* transient — wins over all player chrome */
-    background: rgba(0,0,0,0.8); color: #fff; border-radius: 10px;
-    font-family: 'Open Sans', sans-serif; font-size: 13px; line-height: 1.5;
-    padding: 10px 16px; text-align: center; overflow-wrap: anywhere;
+  .chrome {
+    touch-action: none; /* we handle vertical drags — stop browser panning */
+    display: flex; flex-direction: column; gap: 10px;
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 1022;
+    background: #101114;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.5);
+    padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform 0.25s ease;
   }
-  .share-toast[hidden] { display: none; }
-  .share-toast a { color: var(--accent); text-decoration: none; }
-  .share-toast button {
-    margin-left: 10px; cursor: pointer;
-    font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 10px;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    background: var(--accent); color: var(--ink); border: none; border-radius: 2px;
-    padding: 7px 12px;
+  .chrome::before { /* grab bar */
+    content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
   }
-  .share-toast button:disabled { opacity: 0.5; cursor: default; }
+  .chrome.open { transform: translateY(0); }
+  .chrome .back-btn, .pv-actions .back-btn {
+    position: static; width: 100%; opacity: 1;
+    background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;
+    border-radius: 10px;
+  }
+  .pv-actions { position: static; display: contents; }
+  .chrome .quiet { order: 4; background: none; color: var(--muted, #8a8d94); }
+  /* the toast clears the home-indicator area (specificity beats the later base rule) */
+  .screen .share-toast { bottom: calc(26px + env(safe-area-inset-bottom)); }
+}
+.share-toast {
+  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  z-index: 1030; max-width: 88%; /* transient — wins over all player chrome */
+  background: rgba(0,0,0,0.8); color: #fff; border-radius: 10px;
+  font-family: 'Open Sans', sans-serif; font-size: 13px; line-height: 1.5;
+  padding: 10px 16px; text-align: center; overflow-wrap: anywhere;
+}
+.share-toast[hidden] { display: none; }
+.share-toast a { color: var(--accent, #ff5a36); text-decoration: none; }
+.share-toast button {
+  margin-left: 10px; cursor: pointer;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  background: var(--accent, #ff5a36); color: var(--ink, #100F12); border: none; border-radius: 2px;
+  padding: 7px 12px;
+}
+.share-toast button:disabled { opacity: 0.5; cursor: default; }
+
 
   /* ---- phones: fill the screen, thumb-sized controls ---- */
   @media (max-width: 640px) {
@@ -460,7 +466,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.18</span>
+      <span>v0.0.19</span>
     </footer>
   </div>
 </div>
@@ -483,7 +489,7 @@ html, body { overscroll-behavior: none; }
     <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pageBar"></div></div>
 
     <div class="chrome" id="chromeBar">
-      <button class="back-btn" id="backBtn">← New story</button>
+      <button class="back-btn quiet" id="backBtn">← New story</button>
       <div class="pv-actions">
         <button class="back-btn" id="shareBtn">🔗 Share</button>
         <button class="back-btn" id="libBtn">＋ Library</button>
