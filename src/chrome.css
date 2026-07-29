@@ -49,7 +49,7 @@
     border-radius: 10px;
   }
   .pv-actions { position: static; display: contents; }
-  .chrome .quiet { order: 4; background: none; color: var(--muted, #8a8d94); }
+  .chrome .quiet { order: 4; background: none; color: var(--muted, #9a9da5); }
   /* the toast clears the home-indicator area (specificity beats the later base rule) */
   .screen .share-toast { bottom: calc(26px + env(safe-area-inset-bottom)); }
 }
