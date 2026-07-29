@@ -239,6 +239,24 @@
     ]
   };
 
+  /* The editor assumes story.cards maps 1:1 onto compiled pages, but the
+   * compiler flattens legacy gallery cards into one page per moment —
+   * so flatten them here too before anything renders or edits. */
+  function flattenGalleries(s) {
+    var out = [];
+    ((s && s.cards) || []).forEach(function (c) {
+      if (c && c.type === 'gallery') {
+        (c.items || []).slice(0, 5).forEach(function (it) {
+          it = it || {};
+          out.push({ type: 'prose', kicker: it.kicker || null, title: it.title || null,
+            body: it.body || null, image: it.image || null, layout: null });
+        });
+      } else if (c) out.push(c);
+    });
+    s.cards = out;
+    return s;
+  }
+
   var story = null;
   var fromHandoff = false;
   try {
@@ -253,6 +271,7 @@
     try { var draft = localStorage.getItem('book.editor.draft'); if (draft) story = JSON.parse(draft); } catch (e) {}
   }
   if (!story || !Array.isArray(story.cards) || !story.cards.length) story = JSON.parse(JSON.stringify(STARTER));
+  flattenGalleries(story);
 
   var sel = 0; /* selected story-card index */
   var lastShareId = null;
@@ -273,6 +292,10 @@
     attribution: 'Attribution', price: 'Price', button: 'Button label', url: 'Link URL', address: 'Address or place'
   };
   var AREAS = { body: 1, lines: 1 };
+  /* mirror the API's LIMITS (api/src/lib/story.js) — the server silently
+   * truncates past these, so the editor must stop typing at the line */
+  var MAXLEN = { kicker: 120, title: 160, body: 1000, lines: 3400, attribution: 120,
+    price: 40, button: 60, url: 500, address: 250, imageLabel: 120, style: 200 };
   var NO_IMAGE = { map: 1 };   /* map draws its own page */
   var NO_LAYOUT = { map: 1 };
   var BLANK = {
@@ -373,6 +396,7 @@
     var input = document.createElement(opts && opts.area ? 'textarea' : 'input');
     if (!(opts && opts.area)) input.type = 'text';
     input.value = value == null ? '' : value;
+    if (opts && opts.maxlen) input.maxLength = opts.maxlen;
     if (opts && opts.placeholder) input.placeholder = opts.placeholder;
     wrap.appendChild(input);
     if (opts && opts.hint) {
@@ -438,7 +462,7 @@
     /* text fields for this card type */
     (FIELDS[c.type] || []).forEach(function (key) {
       var value = key === 'lines' ? (c.lines || []).join('\n') : c[key];
-      var f = field(LABELS[key], value, { area: AREAS[key] });
+      var f = field(LABELS[key], value, { area: AREAS[key], maxlen: MAXLEN[key] });
       f.input.addEventListener('input', function () {
         var v = f.input.value;
         if (key === 'lines') c.lines = v.split('\n').map(function (s) { return s; }).filter(function (s) { return s.trim().length; });
@@ -482,7 +506,7 @@
           sec.appendChild(row);
         }
         var lf = field('Scene — what the photograph shows', c.image.label, {
-          placeholder: 'weathered lighthouse on a cliff at dusk',
+          placeholder: 'weathered lighthouse on a cliff at dusk', maxlen: MAXLEN.imageLabel,
           hint: 'Brief a photographer: subject, setting, light. No names, no readable text.'
         });
         lf.input.addEventListener('input', function () {
@@ -548,7 +572,7 @@
     var bsec = document.createElement('div');
     bsec.className = 'ed-section';
     var bf = field('Book — photographic style for every picture', story.style, {
-      placeholder: 'muted 35mm film, overcast coastal light, quiet distances',
+      placeholder: 'muted 35mm film, overcast coastal light, quiet distances', maxlen: MAXLEN.style,
       hint: 'One art-direction line shared by all the book’s photographs.'
     });
     bf.input.addEventListener('input', function () {
@@ -726,7 +750,36 @@
   /* wipe the share id whenever the story mutates (all paths call saveDraft) */
 
   /* ---------- boot ---------- */
-  if (fromHandoff) saveState.textContent = 'Editing your book';
+  if (fromHandoff) {
+    saveState.textContent = 'Editing your book';
+    /* a handoff must not silently destroy an in-progress draft: park the
+     * old draft under a backup key and offer the way back */
+    try {
+      var prevDraft = localStorage.getItem('book.editor.draft');
+      if (prevDraft && prevDraft !== JSON.stringify(story)) {
+        localStorage.setItem('book.editor.draft.backup', prevDraft);
+        var prevName = 'Untitled';
+        try { prevName = JSON.parse(prevDraft).name || 'Untitled'; } catch (e2) {}
+        toast('Your draft “' + BookRuntime.escapeHtml(prevName) + '” is set aside. ' +
+          '<button type="button" id="restoreDraft">Open it instead</button>', true);
+      }
+    } catch (e) {}
+  }
+  shareToast.addEventListener('click', function (e) {
+    if (!e.target.closest('#restoreDraft')) return;
+    try {
+      var backup = localStorage.getItem('book.editor.draft.backup');
+      if (!backup) return;
+      story = flattenGalleries(JSON.parse(backup));
+      localStorage.removeItem('book.editor.draft.backup');
+      nameInput.value = story.name || '';
+      lastShareId = null;
+      select(0);
+      saveDraft();
+      shareToast.hidden = true;
+      saveState.textContent = 'Draft restored';
+    } catch (err) {}
+  });
   select(0);
   window.addEventListener('resize', function () { renderStage(); });
 })();

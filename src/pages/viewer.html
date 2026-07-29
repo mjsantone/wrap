@@ -204,7 +204,8 @@
   document.getElementById('remixBtn').addEventListener('click', function () {
     if (!loadedStory) return;
     try { sessionStorage.setItem('book.edit', JSON.stringify(loadedStory)); } catch (e) {}
-    location.href = '/edit';
+    /* absolute under the /b/{id} rewrite; relative on static mirrors */
+    location.href = /\/b\//.test(location.pathname) ? '/editor.html' : 'editor.html';
   });
 
   document.getElementById('shareBtn').addEventListener('click', async function () {
