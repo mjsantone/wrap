@@ -358,6 +358,7 @@ html, body { overscroll-behavior: none; }
       <div class="pv-actions">
         <button class="back-btn" id="shareBtn">🔗 Share</button>
         <button class="back-btn" id="libBtn">＋ Library</button>
+        <button class="back-btn" id="remixBtn">✎ Remix</button>
         <a class="back-btn quiet" id="libraryBtn" href="/library">Library</a>
       </div>
     </div>
@@ -370,7 +371,7 @@ html, body { overscroll-behavior: none; }
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
-      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.21</p>
+      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.22</p>
     </div>
   </div>
 </div>
@@ -1413,6 +1414,14 @@ html, body { overscroll-behavior: none; }
   var libBtn = document.getElementById('libBtn');
   libBtn.hidden = !realId; /* the sample can't be re-published */
 
+  /* remix: carry this book's story into the editor */
+  var loadedStory = null;
+  document.getElementById('remixBtn').addEventListener('click', function () {
+    if (!loadedStory) return;
+    try { sessionStorage.setItem('book.edit', JSON.stringify(loadedStory)); } catch (e) {}
+    location.href = '/edit';
+  });
+
   document.getElementById('shareBtn').addEventListener('click', async function () {
     var link = realId ? location.origin + '/b/' + realId : location.href;
     var safe = BookRuntime.escapeHtml(link);
@@ -1442,6 +1451,7 @@ html, body { overscroll-behavior: none; }
   /* the built-in sample — the library's seed book, played without the API */
   if (id === 'sample' || /\/b\/sample$/.test(location.pathname)) {
     stateBox.hidden = true;
+    loadedStory = BookCompiler.SAMPLE;
     player.loadBook(BookCompiler.compileBook(BookCompiler.SAMPLE, { height: BookRuntime.canvasHeight() }));
     return;
   }
@@ -1562,6 +1572,7 @@ html, body { overscroll-behavior: none; }
       var book = BookCompiler.compileBook(doc.story || {}, { height: BookRuntime.canvasHeight(), date: doc.createdAt });
       if (book.cards.length < 2) throw new Error('EMPTY');
       stateBox.hidden = true;
+      loadedStory = doc.story;
       player.loadBook(book);
       watchImages(doc.story);
     })
