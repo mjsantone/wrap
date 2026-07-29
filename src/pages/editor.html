@@ -1,0 +1,733 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#100F12">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>Write a book — BOOK</title>
+
+<style>
+/*@inline src/fonts.css*/
+/*@inline src/runtime.css*/
+/*@inline src/chrome.css*/
+
+  :root {
+    --ink: #100F12;
+    --panel: #17161A;
+    --panel-2: #1D1C21;
+    --line: rgba(244, 241, 234, 0.12);
+    --paper: #F4F1EA;
+    --muted: #8a8d94;
+    --accent: #FF5A36;
+  }
+  html, body { background: var(--ink); margin: 0; height: auto; overflow: auto; }
+  body { color: var(--paper); font-family: 'Open Sans', sans-serif; }
+  .editor { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ---- top bar ---- */
+  .ed-top {
+    display: flex; align-items: center; gap: 14px;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--ink); z-index: 40;
+  }
+  .ed-wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 18px; text-decoration: none; color: var(--paper); }
+  .ed-wordmark b { color: var(--accent); }
+  .ed-name {
+    flex: 1; min-width: 60px;
+    background: none; border: none; outline: none; color: var(--paper);
+    font-family: 'Fraunces', Georgia, serif; font-weight: 550; font-size: 19px;
+    border-bottom: 1px dashed transparent; padding: 2px 0;
+  }
+  .ed-name:hover, .ed-name:focus { border-bottom-color: var(--line); }
+  .ed-saved { font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .ed-btn {
+    font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.08em;
+    border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--line);
+    background: none; color: var(--paper); text-decoration: none; white-space: nowrap;
+  }
+  .ed-btn:hover { border-color: rgba(244,241,234,0.35); }
+  .ed-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--ink); font-weight: 700; }
+  .ed-btn.primary:disabled { opacity: 0.5; cursor: default; }
+
+  /* ---- card rail ---- */
+  .ed-rail {
+    display: flex; gap: 10px; align-items: stretch;
+    padding: 14px 16px; overflow-x: auto; border-bottom: 1px solid var(--line);
+    scrollbar-width: thin;
+  }
+  .ed-thumb {
+    position: relative; flex: 0 0 auto; width: 58px; height: 82px;
+    border-radius: 6px; overflow: hidden; cursor: pointer;
+    outline: 2px solid transparent; outline-offset: 2px;
+    background: #000; border: none; padding: 0;
+  }
+  .ed-thumb.sel { outline-color: var(--accent); }
+  .ed-thumb .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform: scale(0.090625); transform-origin: 0 0; pointer-events: none; }
+  .ed-thumb .t-label {
+    position: absolute; inset: auto 0 0 0; text-align: center;
+    font-family: 'Montserrat', sans-serif; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(255,255,255,0.85); background: rgba(0,0,0,0.45); padding: 2px 0;
+  }
+  .ed-add {
+    flex: 0 0 auto; width: 58px; height: 82px; border-radius: 6px;
+    border: 1px dashed var(--line); background: none; color: var(--muted);
+    font-size: 22px; cursor: pointer;
+  }
+  .ed-add:hover { color: var(--paper); border-color: rgba(244,241,234,0.4); }
+  .ed-typemenu {
+    position: absolute; z-index: 60; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 6px; display: flex; flex-direction: column; min-width: 150px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .ed-typemenu button {
+    background: none; border: none; color: var(--paper); text-align: left; cursor: pointer;
+    font-family: 'Open Sans', sans-serif; font-size: 14px; padding: 9px 12px; border-radius: 6px;
+  }
+  .ed-typemenu button:hover { background: rgba(255,255,255,0.07); }
+  .ed-typemenu[hidden] { display: none; }
+
+  /* ---- main split ---- */
+  .ed-main { flex: 1; display: flex; align-items: flex-start; gap: 0; }
+  .ed-panel { flex: 1 1 460px; max-width: 560px; padding: 20px 16px 80px; }
+  .ed-stage {
+    flex: 1 1 380px; position: sticky; top: 118px;
+    display: flex; justify-content: center; padding: 24px 16px;
+  }
+  .ed-card {
+    position: relative; width: min(320px, 38vw); aspect-ratio: 640 / 910;
+    border-radius: 14px; overflow: hidden; background: #000;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  }
+  .ed-card .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; pointer-events: none; }
+
+  /* ---- panel widgets ---- */
+  .ed-cardbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .ed-cardtitle { font-family: 'Fraunces', Georgia, serif; font-weight: 550; font-size: 21px; flex: 1; }
+  .ed-icon {
+    background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 7px;
+    width: 32px; height: 32px; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .ed-icon:hover:not(:disabled) { color: var(--paper); border-color: rgba(244,241,234,0.4); }
+  .ed-icon:disabled { opacity: 0.3; cursor: default; }
+  .ed-icon.danger:hover { color: #ff7a64; border-color: #ff7a64; }
+  .ed-field { margin-bottom: 16px; }
+  .ed-label {
+    display: block; font-family: 'Montserrat', sans-serif; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
+  }
+  .ed-field input[type="text"], .ed-field textarea {
+    width: 100%; box-sizing: border-box; background: var(--panel); color: var(--paper);
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px;
+    font-family: 'Open Sans', sans-serif; font-size: 15px; line-height: 1.5; outline: none;
+  }
+  .ed-field input:focus, .ed-field textarea:focus { border-color: rgba(255,90,54,0.6); }
+  .ed-field textarea { min-height: 96px; resize: vertical; }
+  .ed-hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+  .ed-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ed-seg button {
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+    font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.06em;
+    border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  }
+  .ed-seg button.on { background: rgba(255,90,54,0.16); border-color: var(--accent); color: var(--paper); }
+
+  .ed-section {
+    border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.02);
+  }
+  .ed-section > .ed-label { margin-bottom: 12px; }
+  .ed-swatch { width: 34px; height: 34px; border-radius: 8px; flex: 0 0 auto; border: 1px solid var(--line); }
+  .ed-huerow { display: flex; align-items: center; gap: 12px; }
+  .ed-huerow input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .ed-photothumb { width: 46px; height: 65px; object-fit: cover; border-radius: 6px; }
+
+  .ed-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ---- full-book preview overlay ---- */
+  .ed-preview { position: fixed; inset: 0; z-index: 100; background: rgba(8,8,10,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ed-preview[hidden] { display: none; }
+  .ed-preview .player-stage { width: min(400px, 96vw); height: min(86vh, calc(96vw * 910 / 640)); position: relative; }
+  .ed-preview .screen { width: 100%; height: 100%; border-radius: 18px; overflow: hidden; }
+  .ed-closepv {
+    margin-top: 14px; background: rgba(0,0,0,0.55); color: #fff; border: 1px solid var(--line);
+    border-radius: 999px; font-family: 'Montserrat', sans-serif; font-size: 12px;
+    letter-spacing: 0.08em; padding: 10px 20px; cursor: pointer;
+  }
+
+  .editor .share-toast { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 120; }
+
+  /* ---- narrow screens: stacked, preview via overlay ---- */
+  @media (max-width: 900px) {
+    .ed-stage { display: none; }
+    .ed-panel { max-width: none; }
+    .ed-top { flex-wrap: wrap; }
+  }
+</style>
+
+<div class="editor">
+  <header class="ed-top">
+    <a class="ed-wordmark" href="/">BOOK<b>.</b></a>
+    <input class="ed-name" id="bookName" maxlength="120" placeholder="Name your book" autocomplete="off">
+    <span class="ed-saved" id="saveState">New draft</span>
+    <div style="display:flex; gap:8px;">
+      <button class="ed-btn" id="previewBtn">Preview</button>
+      <button class="ed-btn primary" id="shareBtn">Share</button>
+    </div>
+  </header>
+
+  <div class="ed-rail" id="cardRail"></div>
+
+  <main class="ed-main">
+    <section class="ed-panel" id="panel"></section>
+    <section class="ed-stage"><div class="ed-card" id="stageCard"></div></section>
+  </main>
+</div>
+
+<div class="ed-typemenu" id="typeMenu" hidden></div>
+
+<div class="ed-preview" id="previewOverlay" hidden>
+  <div class="player-stage">
+    <div class="screen" id="pvScreen">
+      <div class="card-container" id="pvCards"></div>
+      <div class="tap-zone left" id="pvTapL" aria-hidden="true"></div>
+      <div class="tap-zone right" id="pvTapR" aria-hidden="true"></div>
+      <button class="pv-btn prev" id="pvPrev" aria-label="Previous card">
+        <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M16 3 L4 17 L16 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="pv-btn next" id="pvNext" aria-label="Next card">
+        <svg width="20" height="34" viewBox="0 0 20 34" fill="none"><path d="M4 3 L16 17 L4 31" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="pagination-track" aria-hidden="true"><div class="current-page" id="pvBar"></div></div>
+    </div>
+  </div>
+  <button class="ed-closepv" id="pvClose">✕ Close preview</button>
+</div>
+
+<div class="share-toast" id="shareToast" hidden></div>
+
+<script>
+/*@inline src/runtime.js*/
+</script>
+<script>
+/*@inline src/compile.js*/
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var LONG_API = '@LONGAPI@';
+  async function apiFetch(path, opts) {
+    if (LONG_API) {
+      try {
+        var r = await fetch(LONG_API + path, opts);
+        if (r.status !== 404) return r;
+      } catch (e) {}
+    }
+    return fetch(path, opts);
+  }
+
+  /* ---------- the story being written ---------- */
+  var STARTER = {
+    name: 'Untitled',
+    style: null,
+    cards: [
+      { type: 'cover', kicker: 'Written by hand', title: 'A New Book',
+        image: { h1: 220, h2: 260, label: 'evening light over a quiet street' }, layout: null },
+      { type: 'prose', kicker: null, title: 'First Page',
+        body: 'Begin here — a few warm sentences carry a page.', image: null, layout: null }
+    ]
+  };
+
+  var story = null;
+  var fromHandoff = false;
+  try {
+    var handed = sessionStorage.getItem('book.edit');
+    if (handed) {
+      story = JSON.parse(handed);
+      sessionStorage.removeItem('book.edit');
+      fromHandoff = true;
+    }
+  } catch (e) {}
+  if (!story) {
+    try { var draft = localStorage.getItem('book.editor.draft'); if (draft) story = JSON.parse(draft); } catch (e) {}
+  }
+  if (!story || !Array.isArray(story.cards) || !story.cards.length) story = JSON.parse(JSON.stringify(STARTER));
+
+  var sel = 0; /* selected story-card index */
+  var lastShareId = null;
+
+  /* ---------- field vocabulary per card type ---------- */
+  var TYPES = ['prose', 'quote', 'product', 'video', 'map'];
+  var TYPE_NAMES = { cover: 'Cover', prose: 'Prose', quote: 'Quote', product: 'Product', video: 'Video', map: 'Map' };
+  var FIELDS = {
+    cover:   ['kicker', 'title'],
+    prose:   ['kicker', 'title', 'body'],
+    quote:   ['title', 'lines', 'attribution'],
+    product: ['kicker', 'title', 'body', 'price', 'button', 'url'],
+    video:   ['title', 'body', 'url'],
+    map:     ['title', 'address']
+  };
+  var LABELS = {
+    kicker: 'Kicker', title: 'Title', body: 'Body', lines: 'Lines — one per line',
+    attribution: 'Attribution', price: 'Price', button: 'Button label', url: 'Link URL', address: 'Address or place'
+  };
+  var AREAS = { body: 1, lines: 1 };
+  var NO_IMAGE = { map: 1 };   /* map draws its own page */
+  var NO_LAYOUT = { map: 1 };
+  var BLANK = {
+    prose:   { type: 'prose', kicker: null, title: 'New Page', body: 'Write the moment…', image: null, layout: null },
+    quote:   { type: 'quote', title: null, lines: ['A line worth keeping.'], attribution: null, image: null, layout: null },
+    product: { type: 'product', kicker: null, title: 'Something Offered', body: 'What it is and why it matters.', price: null, button: 'Learn more', url: null, image: { h1: 40, h2: 70, label: 'the thing itself, soft daylight' }, layout: null },
+    video:   { type: 'video', title: 'Watch', body: null, url: null, image: { h1: 220, h2: 260, label: 'a paused moment from the film' }, layout: null },
+    map:     { type: 'map', title: 'VISIT US', address: '' }
+  };
+
+  /* ---------- rendering: real compiler, real renderer ---------- */
+  function compiled() {
+    return BookCompiler.compileBook(story, { height: 910 });
+  }
+  function renderCardInto(el, node, scale) {
+    el.innerHTML = '';
+    el.style.background = node.bg || '#000';
+    var canvas = document.createElement('div');
+    canvas.className = 'canvas';
+    canvas.style.transform = 'scale(' + scale + ')';
+    var ctx = { bookName: story.name, date: null, player: null };
+    (node.k || []).forEach(function (ch) { BookRuntime.render(ch, canvas, ctx); });
+    el.appendChild(canvas);
+  }
+
+  var rail = document.getElementById('cardRail');
+  var stageCard = document.getElementById('stageCard');
+  var panel = document.getElementById('panel');
+
+  function renderRail() {
+    var book = compiled();
+    rail.innerHTML = '';
+    story.cards.forEach(function (c, i) {
+      var t = document.createElement('button');
+      t.className = 'ed-thumb' + (i === sel ? ' sel' : '');
+      t.setAttribute('data-idx', i);
+      t.title = TYPE_NAMES[c.type] || c.type;
+      renderCardInto(t, book.cards[i], 58 / 640);
+      var lb = document.createElement('span');
+      lb.className = 't-label';
+      lb.textContent = i === 0 ? 'cover' : (TYPE_NAMES[c.type] || '').toLowerCase();
+      t.appendChild(lb);
+      t.addEventListener('click', function () { select(i); });
+      rail.appendChild(t);
+    });
+    /* the colophon, always appended — shown so the shape of the book is honest */
+    var end = document.createElement('button');
+    end.className = 'ed-thumb' + (sel === story.cards.length ? ' sel' : '');
+    renderCardInto(end, book.cards[book.cards.length - 1], 58 / 640);
+    var elb = document.createElement('span');
+    elb.className = 't-label'; elb.textContent = 'end';
+    end.appendChild(elb);
+    end.addEventListener('click', function () { select(story.cards.length); });
+    rail.appendChild(end);
+
+    var add = document.createElement('button');
+    add.className = 'ed-add'; add.id = 'addCard'; add.textContent = '＋';
+    add.title = 'Add a page';
+    add.addEventListener('click', openTypeMenu);
+    rail.appendChild(add);
+  }
+
+  function renderStage() {
+    var book = compiled();
+    var node = book.cards[Math.min(sel, book.cards.length - 1)];
+    var w = stageCard.clientWidth || 320;
+    renderCardInto(stageCard, node, w / 640);
+  }
+
+  /* refresh scopes: text edits touch one card; structure redraws everything */
+  var refreshTimer = null;
+  function refreshSoon(structural) {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(function () {
+      if (structural) renderRail();
+      else {
+        var book = compiled();
+        var thumb = rail.querySelector('[data-idx="' + sel + '"]');
+        if (thumb) {
+          var keep = thumb.querySelector('.t-label');
+          renderCardInto(thumb, book.cards[sel], 58 / 640);
+          if (keep) thumb.appendChild(keep);
+        }
+      }
+      renderStage();
+      saveDraft();
+    }, 180);
+  }
+
+  /* ---------- the fields panel ---------- */
+  function field(labelText, value, opts) {
+    var wrap = document.createElement('div');
+    wrap.className = 'ed-field';
+    var lb = document.createElement('label');
+    lb.className = 'ed-label';
+    lb.textContent = labelText;
+    wrap.appendChild(lb);
+    var input = document.createElement(opts && opts.area ? 'textarea' : 'input');
+    if (!(opts && opts.area)) input.type = 'text';
+    input.value = value == null ? '' : value;
+    if (opts && opts.placeholder) input.placeholder = opts.placeholder;
+    wrap.appendChild(input);
+    if (opts && opts.hint) {
+      var h = document.createElement('div');
+      h.className = 'ed-hint';
+      h.textContent = opts.hint;
+      wrap.appendChild(h);
+    }
+    return { el: wrap, input: input };
+  }
+
+  function seg(options, current, onPick) {
+    var box = document.createElement('div');
+    box.className = 'ed-seg';
+    options.forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o.label;
+      if (o.value === current) b.classList.add('on');
+      b.addEventListener('click', function () {
+        onPick(o.value);
+        Array.prototype.forEach.call(box.children, function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+      box.appendChild(b);
+    });
+    return box;
+  }
+
+  function renderPanel() {
+    panel.innerHTML = '';
+
+    if (sel >= story.cards.length) { /* the colophon */
+      var note = document.createElement('p');
+      note.className = 'ed-note';
+      note.textContent = 'The closing page sets itself — your book’s name, when it was told, and the type it was set in.';
+      panel.appendChild(note);
+      return;
+    }
+
+    var c = story.cards[sel];
+
+    /* card bar: title + operations */
+    var bar = document.createElement('div');
+    bar.className = 'ed-cardbar';
+    var ct = document.createElement('div');
+    ct.className = 'ed-cardtitle';
+    ct.textContent = (sel === 0 ? 'Cover' : 'Page ' + (sel + 1)) + ' — ' + (TYPE_NAMES[c.type] || c.type);
+    bar.appendChild(ct);
+    function op(txt, title, fn, disabled, danger) {
+      var b = document.createElement('button');
+      b.className = 'ed-icon' + (danger ? ' danger' : '');
+      b.textContent = txt; b.title = title; b.disabled = !!disabled;
+      b.addEventListener('click', fn);
+      bar.appendChild(b);
+    }
+    op('◀', 'Move left', function () { move(-1); }, sel <= 1);
+    op('▶', 'Move right', function () { move(1); }, sel === 0 || sel >= story.cards.length - 1);
+    op('⧉', 'Duplicate', function () { duplicate(); }, sel === 0);
+    op('✕', 'Delete page', function () { remove(); }, sel === 0, true);
+    panel.appendChild(bar);
+
+    /* text fields for this card type */
+    (FIELDS[c.type] || []).forEach(function (key) {
+      var value = key === 'lines' ? (c.lines || []).join('\n') : c[key];
+      var f = field(LABELS[key], value, { area: AREAS[key] });
+      f.input.addEventListener('input', function () {
+        var v = f.input.value;
+        if (key === 'lines') c.lines = v.split('\n').map(function (s) { return s; }).filter(function (s) { return s.trim().length; });
+        else c[key] = v.trim().length ? v : null;
+        refreshSoon(false);
+      });
+      panel.appendChild(f.el);
+    });
+
+    /* image: photograph or ink page */
+    if (!NO_IMAGE[c.type]) {
+      var sec = document.createElement('div');
+      sec.className = 'ed-section';
+      var slb = document.createElement('div');
+      slb.className = 'ed-label'; slb.textContent = 'Picture';
+      sec.appendChild(slb);
+      sec.appendChild(seg(
+        [{ label: 'Photograph', value: 'photo' }, { label: 'Ink page — type only', value: 'ink' }],
+        c.image ? 'photo' : 'ink',
+        function (v) {
+          if (v === 'ink') c.image = null;
+          else if (!c.image) c.image = { h1: 220, h2: 260, label: '' };
+          renderPanel();
+          refreshSoon(false);
+        }
+      ));
+      if (c.image) {
+        var gap = document.createElement('div'); gap.style.height = '14px'; sec.appendChild(gap);
+        if (c.image.url) {
+          var row = document.createElement('div');
+          row.style.cssText = 'display:flex; gap:12px; align-items:center; margin-bottom:12px;';
+          var im = document.createElement('img');
+          im.className = 'ed-photothumb';
+          im.src = BookRuntime.imageSrc(c.image.url) || '';
+          im.alt = '';
+          row.appendChild(im);
+          var nt = document.createElement('div');
+          nt.className = 'ed-hint';
+          nt.textContent = 'Already painted. Changing the scene clears it, and it repaints when you share.';
+          row.appendChild(nt);
+          sec.appendChild(row);
+        }
+        var lf = field('Scene — what the photograph shows', c.image.label, {
+          placeholder: 'weathered lighthouse on a cliff at dusk',
+          hint: 'Brief a photographer: subject, setting, light. No names, no readable text.'
+        });
+        lf.input.addEventListener('input', function () {
+          c.image.label = lf.input.value;
+          if (c.image.url) { delete c.image.url; renderPanel(); }
+          refreshSoon(false);
+        });
+        sec.appendChild(lf.el);
+        var hueWrap = document.createElement('div');
+        hueWrap.className = 'ed-field';
+        var hlb = document.createElement('label');
+        hlb.className = 'ed-label'; hlb.textContent = 'Mood hue — the page’s color before the photo lands';
+        hueWrap.appendChild(hlb);
+        var hrow = document.createElement('div');
+        hrow.className = 'ed-huerow';
+        var sw = document.createElement('div');
+        sw.className = 'ed-swatch';
+        sw.style.background = 'hsl(' + (c.image.h1 || 0) + ', 50%, 40%)';
+        var range = document.createElement('input');
+        range.type = 'range'; range.min = '0'; range.max = '359'; range.value = String(c.image.h1 || 0);
+        range.addEventListener('input', function () {
+          c.image.h1 = Number(range.value);
+          c.image.h2 = (c.image.h1 + 40) % 360;
+          sw.style.background = 'hsl(' + c.image.h1 + ', 50%, 40%)';
+          refreshSoon(false);
+        });
+        hrow.appendChild(sw); hrow.appendChild(range);
+        hueWrap.appendChild(hrow);
+        sec.appendChild(hueWrap);
+      }
+      panel.appendChild(sec);
+    }
+
+    /* art direction */
+    if (!NO_LAYOUT[c.type]) {
+      var lay = document.createElement('div');
+      lay.className = 'ed-section';
+      var L = c.layout || {};
+      function pickLayout(k, v) {
+        var cur = c.layout || {};
+        var next = { band: cur.band || null, align: cur.align || null, scale: cur.scale || null };
+        next[k] = v;
+        c.layout = (next.band || next.align || next.scale) ? next : null;
+        refreshSoon(false);
+      }
+      var l1 = document.createElement('div'); l1.className = 'ed-label'; l1.textContent = 'Type placement';
+      lay.appendChild(l1);
+      lay.appendChild(seg([
+        { label: 'Auto', value: null }, { label: 'Top', value: 'top' }, { label: 'Middle', value: 'middle' }, { label: 'Bottom', value: 'bottom' }
+      ], L.band || null, function (v) { pickLayout('band', v); }));
+      var g1 = document.createElement('div'); g1.style.height = '12px'; lay.appendChild(g1);
+      lay.appendChild(seg([
+        { label: 'Auto', value: null }, { label: 'Centered', value: 'center' }, { label: 'Left', value: 'left' }
+      ], L.align || null, function (v) { pickLayout('align', v); }));
+      var g2 = document.createElement('div'); g2.style.height = '12px'; lay.appendChild(g2);
+      lay.appendChild(seg([
+        { label: 'Auto', value: null }, { label: 'Quiet', value: 'quiet' }, { label: 'Standard', value: 'standard' }, { label: 'Loud', value: 'loud' }
+      ], L.scale || null, function (v) { pickLayout('scale', v); }));
+      panel.appendChild(lay);
+    }
+
+    /* book-level style, always at hand */
+    var bsec = document.createElement('div');
+    bsec.className = 'ed-section';
+    var bf = field('Book — photographic style for every picture', story.style, {
+      placeholder: 'muted 35mm film, overcast coastal light, quiet distances',
+      hint: 'One art-direction line shared by all the book’s photographs.'
+    });
+    bf.input.addEventListener('input', function () {
+      story.style = bf.input.value.trim().length ? bf.input.value : null;
+      markDirty();
+    });
+    bsec.appendChild(bf.el);
+    panel.appendChild(bsec);
+  }
+
+  /* ---------- card operations ---------- */
+  function select(i) {
+    sel = i;
+    renderRail();
+    renderPanel();
+    renderStage();
+  }
+  function move(dir) {
+    var j = sel + dir;
+    if (sel === 0 || j <= 0 || j >= story.cards.length) return;
+    var c = story.cards.splice(sel, 1)[0];
+    story.cards.splice(j, 0, c);
+    sel = j;
+    select(sel);
+    saveDraft();
+  }
+  function duplicate() {
+    if (story.cards.length >= 12) return toast('A book holds at most 12 pages.');
+    var copy = JSON.parse(JSON.stringify(story.cards[sel]));
+    if (copy.image) delete copy.image.url; /* the copy paints its own picture */
+    story.cards.splice(sel + 1, 0, copy);
+    select(sel + 1);
+    saveDraft();
+  }
+  function remove() {
+    if (sel === 0) return;
+    story.cards.splice(sel, 1);
+    select(Math.min(sel, story.cards.length - 1));
+    saveDraft();
+  }
+
+  var typeMenu = document.getElementById('typeMenu');
+  function openTypeMenu(e) {
+    typeMenu.innerHTML = '';
+    TYPES.forEach(function (t) {
+      var b = document.createElement('button');
+      b.textContent = TYPE_NAMES[t];
+      b.addEventListener('click', function () {
+        typeMenu.hidden = true;
+        if (story.cards.length >= 12) return toast('A book holds at most 12 pages.');
+        story.cards.push(JSON.parse(JSON.stringify(BLANK[t])));
+        select(story.cards.length - 1);
+        saveDraft();
+      });
+      typeMenu.appendChild(b);
+    });
+    var r = e.currentTarget.getBoundingClientRect();
+    typeMenu.style.left = Math.min(r.left, window.innerWidth - 170) + 'px';
+    typeMenu.style.top = (r.bottom + 6) + 'px';
+    typeMenu.hidden = false;
+    e.stopPropagation();
+  }
+  document.addEventListener('click', function (e) {
+    if (!typeMenu.hidden && !typeMenu.contains(e.target)) typeMenu.hidden = true;
+  });
+
+  /* ---------- name + draft persistence ---------- */
+  var nameInput = document.getElementById('bookName');
+  var saveState = document.getElementById('saveState');
+  nameInput.value = story.name || '';
+  nameInput.addEventListener('input', function () {
+    story.name = nameInput.value.trim().length ? nameInput.value : 'Untitled';
+    refreshSoon(false); /* the colophon carries the name */
+  });
+
+  var dirty = false;
+  function markDirty() { dirty = true; saveDraft(); }
+  var draftTimer = null;
+  function saveDraft() {
+    lastShareId = null; /* edits after a share need a fresh share */
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      try {
+        localStorage.setItem('book.editor.draft', JSON.stringify(story));
+        saveState.textContent = 'Draft saved';
+      } catch (e) {}
+    }, 400);
+  }
+
+  /* ---------- full-book preview ---------- */
+  var overlay = document.getElementById('previewOverlay');
+  var pvPlayer = null;
+  document.getElementById('previewBtn').addEventListener('click', function () {
+    if (!pvPlayer) {
+      pvPlayer = BookRuntime.createPlayer({
+        screen: document.getElementById('pvScreen'),
+        container: document.getElementById('pvCards'),
+        prevBtn: document.getElementById('pvPrev'),
+        nextBtn: document.getElementById('pvNext'),
+        pageBar: document.getElementById('pvBar'),
+        tapLeft: document.getElementById('pvTapL'),
+        tapRight: document.getElementById('pvTapR'),
+        keyGate: function () { return !overlay.hidden; },
+        dragGate: function () { return !overlay.hidden; }
+      });
+    }
+    overlay.hidden = false;
+    pvPlayer.loadBook(BookCompiler.compileBook(story, { height: 910, date: new Date().toISOString() }));
+  });
+  document.getElementById('pvClose').addEventListener('click', function () { overlay.hidden = true; });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !overlay.hidden) overlay.hidden = true;
+  });
+
+  /* ---------- share: store, then paint the pictures ---------- */
+  var shareToast = document.getElementById('shareToast');
+  var toastTimer = null;
+  function toast(html, sticky) {
+    shareToast.innerHTML = html;
+    shareToast.hidden = false;
+    clearTimeout(toastTimer);
+    if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
+  }
+
+  async function fanOutImages(id, slots) {
+    for (var i = 0; i < (slots || []).length; i++) {
+      try {
+        var res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot: slots[i] }),
+          keepalive: true
+        });
+        if (res.status === 503 || res.status === 429) return;
+      } catch (e) {}
+    }
+  }
+
+  var shareBtn = document.getElementById('shareBtn');
+  shareBtn.addEventListener('click', async function () {
+    if (lastShareId) { /* unchanged since the last share — same link */
+      toast('This book lives at <a href="/b/' + lastShareId + '" target="_blank" rel="noopener noreferrer">' +
+        location.origin + '/b/' + lastShareId + '</a>', true);
+      return;
+    }
+    shareBtn.disabled = true;
+    shareBtn.textContent = 'Sharing…';
+    try {
+      var res = await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story: story })
+      });
+      var data = null;
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      lastShareId = data.id;
+      var link = location.origin + '/b/' + data.id;
+      var copied = false;
+      try { await navigator.clipboard.writeText(link); copied = true; } catch (e) {}
+      if ((data.imageSlots || []).length) fanOutImages(data.id, data.imageSlots);
+      toast((copied ? 'Link copied — ' : 'Your book: ') +
+        '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
+        ((data.imageSlots || []).length ? '<br><span>Painting the pictures — open the link to watch them land.</span>' : ''),
+        true);
+      saveState.textContent = 'Shared';
+    } catch (e) {
+      toast('Sharing isn’t available here' + (e && e.message ? ' (' + BookRuntime.escapeHtml(e.message) + ')' : '') + ' — it needs the hosted API.');
+    } finally {
+      shareBtn.disabled = false;
+      shareBtn.textContent = 'Share';
+    }
+  });
+
+  /* wipe the share id whenever the story mutates (all paths call saveDraft) */
+
+  /* ---------- boot ---------- */
+  if (fromHandoff) saveState.textContent = 'Editing your book';
+  select(0);
+  window.addEventListener('resize', function () { renderStage(); });
+})();
+</script>

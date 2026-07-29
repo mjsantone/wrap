@@ -198,6 +198,7 @@
       <div class="pv-actions">
         <button class="back-btn" id="shareBtn">🔗 Share</button>
         <button class="back-btn" id="libBtn">＋ Library</button>
+        <button class="back-btn" id="editBtn">✎ Edit</button>
         <button class="back-btn" id="regenBtn">↻ Regenerate</button>
       </div>
     </div>
@@ -381,6 +382,13 @@
   }
   chromeBar.addEventListener('pointerup', endSheetDrag);
   chromeBar.addEventListener('pointercancel', endSheetDrag);
+
+  /* hand the story to the editor for by-hand touch-ups */
+  document.getElementById('editBtn').addEventListener('click', function () {
+    if (!lastStory) return;
+    try { sessionStorage.setItem('book.edit', JSON.stringify(lastStory)); } catch (e) {}
+    location.href = 'editor.html';
+  });
 
   document.getElementById('backBtn').addEventListener('click', showHome);
   document.getElementById('regenBtn').addEventListener('click', function () {

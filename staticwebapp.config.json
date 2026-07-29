@@ -9,6 +9,10 @@
       "rewrite": "/library.html"
     },
     {
+      "route": "/edit",
+      "rewrite": "/editor.html"
+    },
+    {
       "route": "/gallery",
       "redirect": "/library",
       "statusCode": 301
