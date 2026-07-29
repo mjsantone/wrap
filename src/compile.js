@@ -12,7 +12,9 @@
   function fitFont(text, base, perChar) {
     var len = (text || '').length;
     if (len <= perChar) return base;
-    return Math.max(30, Math.round(base * perChar / len));
+    /* floor 34: a shrunken title must never fall below quote size, or
+     * the page's hierarchy inverts against 27px body text */
+    return Math.max(34, Math.round(base * perChar / len));
   }
   function num(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : ((n % 360) + 360) % 360; }
   /* slot is the image's address in the story ("3" = card 3, "2.1" =
@@ -59,7 +61,7 @@
     display: 76,  // cover title
     title: 54,    // card titles
     gtitle: 44,   // gallery item titles
-    quote: 30,    // quote lines
+    quote: 34,    // quote lines — a clear step above body, or quote pages read flat
     body: 27,     // prose body
     small: 24,    // gallery/video body
     kicker: 15,   // tracked caps labels
@@ -77,6 +79,10 @@
     };
     if (opts.weight) css['font-weight'] = String(opts.weight);
     if (opts.ls) css['letter-spacing'] = opts.ls;
+    /* tracked caps set centered drift optically left (the last glyph's
+     * trailing letter-space counts as line width) — a matching text-indent
+     * rebalances them */
+    if (opts.ls && (opts.align || 'center') === 'center') css['text-indent'] = opts.ls;
     if (opts.caps) css['text-transform'] = 'uppercase';
     /* modern text wrapping: balance kills one-word second lines on
      * titles; pretty kills widows in reading text (older browsers ignore) */
@@ -184,11 +190,11 @@
         k.push({ t: 'veil', css: FULL });
       }
       var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
-      if (c.attribution) lines.push('<i>— ' + escapeHtml(c.attribution) + '</i>');
+      if (c.attribution) lines.push('<i class="q-attr">— ' + escapeHtml(smarten(c.attribution)) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
       if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.small : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.body : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'prose') {
@@ -218,8 +224,8 @@
       if (c.button) {
         k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
           position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
-          color: '#fff', border: '3px solid #fff', 'font-family': OPEN, 'font-size': '24px',
-          'letter-spacing': '0.08em', 'z-index': '20'
+          color: '#fff', border: '3px solid #fff', 'font-family': MONT, 'font-size': '21px',
+          'font-weight': '600', 'letter-spacing': '0.14em', 'z-index': '20'
         }});
         k.push({ t: 'action', url: c.url || '', css: { position: 'absolute', top: (prO + 248) + 'px', left: '97px', width: '446px', height: '76px' } });
       }

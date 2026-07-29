@@ -1,4 +1,4 @@
-:root { --accent: #FF5A36; --ink: #100F12; --paper: #F4F1EA; --muted: #8a8d94; }
+:root { --accent: #FF5A36; --ink: #100F12; --paper: #F4F1EA; --muted: #9a9da5; }
 /* WrapRuntime styles — the player stage, card flip mechanics, and every
  * rendered component. Shared by all pages; page chrome lives in each page. */
 
@@ -58,7 +58,10 @@ html, body { overscroll-behavior: none; }
 }
 .card.animate-swipe-hint { animation: 1.9s 2s 1 bounceCardHintAnimation; }
 
-.canvas { position: absolute; top: 0; left: 0; width: 640px; height: var(--canvas-h, 910px); transform-origin: 0 0; }
+.canvas { position: absolute; top: 0; left: 0; width: 640px; height: var(--canvas-h, 910px); transform-origin: 0 0;
+  /* Fraunces carries an opsz axis (verified in the embedded subset) —
+   * keep optical sizing explicit so display cuts sharpen at title sizes */
+  font-optical-sizing: auto; }
 .canvas p { margin: 0 0 0.4em; }
 .canvas p:last-child { margin-bottom: 0; }
 
@@ -93,6 +96,14 @@ html, body { overscroll-behavior: none; }
 .m-par .card.is-dragging .canvas > .cmp:not(.cmp-image):not(.cmp-gradation):not(.cmp-veil):not(.cmp-outline) {
   transform: translateX(var(--par, 0px));
 }
+/* a whisper of shadow keeps type legible when a pale photograph fights
+ * the scrim — only pages that carry an image get it (sibling selector) */
+.canvas > .cmp-image ~ .cmp { text-shadow: 0 1px 24px rgba(0, 0, 0, 0.35); }
+/* quote attributions step down and apart from the quotation itself */
+.q-attr {
+  display: block; font-size: 0.62em; margin-top: 0.8em;
+  letter-spacing: 0.04em; opacity: 0.85;
+}
 /* editorial drop cap on left-set prose */
 .dropcap {
   float: left; font-family: 'Fraunces', Georgia, serif; font-weight: 550;
@@ -101,6 +112,7 @@ html, body { overscroll-behavior: none; }
 /* subtle loading state: the scene label breathes quietly on the solid tone */
 .img-ph span {
   font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.3em;
+  text-indent: 0.3em; /* recenters tracked caps */
   text-transform: uppercase; color: rgba(255,255,255,0.32); text-align: center;
   max-width: 76%; animation: phBreathe 3.4s ease-in-out infinite;
 }
@@ -129,9 +141,9 @@ html, body { overscroll-behavior: none; }
   align-items: center; justify-content: center; gap: 14px;
 }
 .cmp-map .map-pin span {
-  font-family: 'Open Sans', sans-serif; font-size: 28px; color: #fff;
-  background: rgba(0,0,0,0.55); border-radius: 8px; padding: 10px 22px;
-  max-width: 80%; text-align: center;
+  font-family: 'Montserrat', sans-serif; font-size: 22px; color: #fff;
+  background: rgba(0,0,0,0.55); border-radius: 8px; padding: 12px 24px;
+  max-width: 80%; text-align: center; line-height: 1.4;
 }
 .cmp-flow {
   display: flex; align-items: center; justify-content: center; gap: 14px;
@@ -151,17 +163,20 @@ html, body { overscroll-behavior: none; }
 }
 .cmp-widget:hover { background: rgba(255,90,54,0.35) !important; }
 .cmp-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.cmp-end p { color: #fff; font-weight: 200; font-size: 26px; margin: 5px 0; font-family: 'Open Sans', sans-serif; max-width: 85%; }
+/* the colophon speaks in the book's own voice: Fraunces italic, not UI sans */
+.cmp-end p { color: #fff; font-weight: 500; font-style: italic; font-size: 30px; margin: 5px 0; font-family: 'Fraunces', Georgia, serif; max-width: 85%; text-wrap: balance; }
 .cmp-end .end-colophon {
   font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 0.3em;
+  text-indent: 0.3em; /* recenters tracked caps */
   text-transform: uppercase; color: rgba(244,241,234,0.45); line-height: 2.1;
   margin-bottom: 26px;
 }
 .cmp-end .end-wordmark { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 34px; letter-spacing: 0.04em; color: #fff; margin-top: 6px; }
 .cmp-end .end-wordmark b { color: var(--accent); }
 .cmp-end .replay {
-  margin-top: 28px; cursor: pointer; font-family: 'Open Sans', sans-serif; font-size: 22px;
-  color: #fff; background: #434343; border: none; border-radius: 3px; padding: 12px 40px;
+  margin-top: 28px; cursor: pointer; font-family: 'Montserrat', sans-serif; font-size: 16px;
+  letter-spacing: 0.12em; text-indent: 0.12em; text-transform: uppercase;
+  color: #fff; background: #434343; border: none; border-radius: 3px; padding: 14px 40px;
   box-shadow: 0 2px 0 rgba(35,31,32,0.25); transition: all 0.2s ease-in-out;
 }
 .cmp-end .replay:hover { background: var(--accent); color: #212121; }
