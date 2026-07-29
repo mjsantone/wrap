@@ -109,6 +109,9 @@
   .loading .sk-spinner-wave { margin: 0; }
   .loading-note { color: var(--muted); font-size: 12px; margin-top: 16px; font-family: 'Montserrat', sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
   .loading[hidden] { display: none; }
+  .alt-entry { margin: 12px 2px 0; text-align: right; font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em; }
+  .alt-entry a { color: var(--muted); text-decoration: none; }
+  .alt-entry a:hover { color: var(--accent); }
 
   .footer {
     margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(244,241,234,0.14);
@@ -156,6 +159,7 @@
       <div class="actions">
         <button class="btn btn-primary" id="generateBtn">Book it</button>
       </div>
+      <p class="alt-entry"><a href="editor.html">or write it yourself →</a></p>
     </div>
 
     <div class="loading" id="loading" hidden>
@@ -303,6 +307,7 @@
       lastStory = story;
       lastShareId = null; /* a fresh book hasn't been shared yet */
       player.loadBook(book);
+      hintSheet();
     } catch (e) {
       showError('Could not render the generated book: ' + e.message);
     }
@@ -327,9 +332,22 @@
     return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
   }
   function setSheet(open) {
+    chromeBar.classList.remove('peek');
     chromeBar.classList.toggle('open', open);
     /* the book pushes back and locks while the sheet is up */
     screenNode.classList.toggle('sheet-open', open);
+    if (open) {
+      try { localStorage.setItem('book.sheetHinted', '1'); } catch (e) {}
+      var first = chromeBar.querySelector('button:not([hidden])');
+      if (first && isPhone()) first.focus();
+    }
+  }
+  /* first book on a phone: the grab bar peeks so the sheet is discoverable */
+  function hintSheet() {
+    if (!isPhone()) return;
+    try { if (localStorage.getItem('book.sheetHinted')) return; } catch (e) {}
+    chromeBar.classList.add('peek');
+    setTimeout(function () { chromeBar.classList.remove('peek'); }, 2800);
   }
   chromeBar.addEventListener('click', function (e) {
     if (e.target.closest('button')) setSheet(false);
@@ -572,10 +590,27 @@
     }
   });
 
+  /* the wait can run past a minute on high effort — staged copy makes it
+   * feel like work, not a hang */
+  var LOADING_STAGES = ['Writing your book…', 'Checking the real places…', 'Choosing the pictures…', 'Setting the type…'];
+  var loadingNote = document.getElementById('loadingNote');
+  var stageTimer = null;
+  function startLoadingStages() {
+    var i = 0;
+    loadingNote.textContent = LOADING_STAGES[0];
+    clearInterval(stageTimer);
+    stageTimer = setInterval(function () {
+      i = Math.min(i + 1, LOADING_STAGES.length - 1);
+      loadingNote.textContent = LOADING_STAGES[i];
+      if (i === LOADING_STAGES.length - 1) clearInterval(stageTimer);
+    }, 9000);
+  }
+
   async function runGenerate(text) {
     errorBox.hidden = true;
     generateBtn.disabled = true;
     loading.hidden = false;
+    startLoadingStages();
     lastStoryText = text;
     try {
       var story = await generateServer(text);
@@ -592,6 +627,7 @@
     } finally {
       generateBtn.disabled = false;
       loading.hidden = true;
+      clearInterval(stageTimer);
     }
   }
 

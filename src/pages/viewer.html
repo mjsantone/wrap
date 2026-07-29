@@ -104,9 +104,22 @@
     return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
   }
   function setSheet(open) {
+    chromeBar.classList.remove('peek');
     chromeBar.classList.toggle('open', open);
     /* the book pushes back and locks while the sheet is up */
     screenNode.classList.toggle('sheet-open', open);
+    if (open) {
+      try { localStorage.setItem('book.sheetHinted', '1'); } catch (e) {}
+      var first = chromeBar.querySelector('button:not([hidden])');
+      if (first && isPhone()) first.focus();
+    }
+  }
+  /* first book on a phone: the grab bar peeks so the sheet is discoverable */
+  function hintSheet() {
+    if (!isPhone()) return;
+    try { if (localStorage.getItem('book.sheetHinted')) return; } catch (e) {}
+    chromeBar.classList.add('peek');
+    setTimeout(function () { chromeBar.classList.remove('peek'); }, 2800);
   }
   var toastTimer = null;
   function toast(html, sticky) {
@@ -239,6 +252,7 @@
     stateBox.hidden = true;
     loadedStory = BookCompiler.SAMPLE;
     player.loadBook(BookCompiler.compileBook(BookCompiler.SAMPLE, { height: BookRuntime.canvasHeight() }));
+    hintSheet();
     return;
   }
 
@@ -360,6 +374,7 @@
       stateBox.hidden = true;
       loadedStory = doc.story;
       player.loadBook(book);
+      hintSheet();
       watchImages(doc.story);
     })
     .catch(function (e) {

@@ -170,6 +170,7 @@
     <a class="ed-wordmark" href="/">BOOK<b>.</b></a>
     <input class="ed-name" id="bookName" maxlength="120" placeholder="Name your book" autocomplete="off">
     <span class="ed-saved" id="saveState">New draft</span>
+    <span class="ed-saved" style="opacity:0.65">v@BOOKVERSION@</span>
     <div style="display:flex; gap:8px;">
       <button class="ed-btn" id="previewBtn">Preview</button>
       <button class="ed-btn primary" id="shareBtn">Share</button>
@@ -333,6 +334,8 @@
       t.className = 'ed-thumb' + (i === sel ? ' sel' : '');
       t.setAttribute('data-idx', i);
       t.title = TYPE_NAMES[c.type] || c.type;
+      t.setAttribute('aria-label', 'Page ' + (i + 1) + ' — ' + (TYPE_NAMES[c.type] || c.type));
+      if (i === sel) t.setAttribute('aria-current', 'true');
       renderCardInto(t, book.cards[i], 58 / 640);
       var lb = document.createElement('span');
       lb.className = 't-label';
@@ -386,6 +389,7 @@
   }
 
   /* ---------- the fields panel ---------- */
+  var fieldSeq = 0;
   function field(labelText, value, opts) {
     var wrap = document.createElement('div');
     wrap.className = 'ed-field';
@@ -395,6 +399,8 @@
     wrap.appendChild(lb);
     var input = document.createElement(opts && opts.area ? 'textarea' : 'input');
     if (!(opts && opts.area)) input.type = 'text';
+    input.id = 'edField' + (++fieldSeq);
+    lb.htmlFor = input.id;
     input.value = value == null ? '' : value;
     if (opts && opts.maxlen) input.maxLength = opts.maxlen;
     if (opts && opts.placeholder) input.placeholder = opts.placeholder;
@@ -638,6 +644,9 @@
   document.addEventListener('click', function (e) {
     if (!typeMenu.hidden && !typeMenu.contains(e.target)) typeMenu.hidden = true;
   });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !typeMenu.hidden) typeMenu.hidden = true;
+  });
 
   /* ---------- name + draft persistence ---------- */
   var nameInput = document.getElementById('bookName');
@@ -697,18 +706,45 @@
     if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
   }
 
+  function setImageNote(text) {
+    var note = document.getElementById('imgNote');
+    if (note) { if (text) note.textContent = text; else note.remove(); }
+  }
+
+  /* same shape as the composer's fan-out: sequential, honest about the
+   * outcome, tolerant of a severed connection (the server may finish
+   * painting after the response is cut — opening the link collects it) */
   async function fanOutImages(id, slots) {
+    var landed = 0, firstErr = null, netFails = 0;
     for (var i = 0; i < (slots || []).length; i++) {
+      if (lastShareId !== id) return; // edited since — a newer share owns the pictures
+      var res;
       try {
-        var res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
+        res = await apiFetch('/api/books/' + encodeURIComponent(id) + '/images', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ slot: slots[i] }),
           keepalive: true
         });
-        if (res.status === 503 || res.status === 429) return;
-      } catch (e) {}
+      } catch (e) {
+        if (++netFails >= 2) { setImageNote(null); return; }
+        if (!firstErr) firstErr = 'connection dropped';
+        continue;
+      }
+      netFails = 0;
+      if (res.status === 503 || res.status === 429) { setImageNote(null); return; }
+      if (!res.ok) {
+        if (!firstErr) {
+          try { firstErr = (await res.json() || {}).error; } catch (e) {}
+          firstErr = firstErr || 'HTTP ' + res.status;
+        }
+        continue;
+      }
+      landed += 1;
     }
+    if (landed === (slots || []).length) setImageNote('The pictures are in — open the link.');
+    else if (landed) setImageNote('Some pictures didn’t finish — opening the book link retries them.');
+    else setImageNote('The pictures didn’t paint' + (firstErr ? ' (' + firstErr + ')' : '') + ' — opening the book link retries them.');
   }
 
   var shareBtn = document.getElementById('shareBtn');
@@ -736,7 +772,8 @@
       if ((data.imageSlots || []).length) fanOutImages(data.id, data.imageSlots);
       toast((copied ? 'Link copied — ' : 'Your book: ') +
         '<a href="' + link + '" target="_blank" rel="noopener noreferrer">' + link + '</a>' +
-        ((data.imageSlots || []).length ? '<br><span>Painting the pictures — open the link to watch them land.</span>' : ''),
+        '<button type="button" id="galleryBtn">Add to the library</button>' +
+        ((data.imageSlots || []).length ? '<br><span id="imgNote">Painting the pictures — open the link to watch them land.</span>' : ''),
         true);
       saveState.textContent = 'Shared';
     } catch (e) {
@@ -765,6 +802,25 @@
       }
     } catch (e) {}
   }
+  /* the shared book can go straight onto the public shelf, like the composer's */
+  shareToast.addEventListener('click', async function (e) {
+    var gb = e.target.closest('#galleryBtn');
+    if (!gb || !lastShareId) return;
+    gb.disabled = true;
+    gb.textContent = 'Adding…';
+    try {
+      var res = await fetch('/api/books/' + encodeURIComponent(lastShareId) + '/publish', { method: 'POST' });
+      var data = null;
+      try { data = await res.json(); } catch (err) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      gb.textContent = 'On the shelf ✓';
+    } catch (err) {
+      gb.disabled = false;
+      gb.textContent = 'Add to the library';
+      toast('Couldn’t add it to the library' + (err && err.message ? ': ' + BookRuntime.escapeHtml(err.message) : ''));
+    }
+  });
+
   shareToast.addEventListener('click', function (e) {
     if (!e.target.closest('#restoreDraft')) return;
     try {
