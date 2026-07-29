@@ -407,7 +407,15 @@
       drag = { x: e.clientX, y: e.clientY, mode: null, card: null, fwd: true, dx: 0 };
     });
     /* after a drag the release still synthesizes a click — it must not
-     * follow the map link or trip a tap-zone */
+     * follow the map link or trip a tap-zone. The flag self-clears in
+     * case that click never arrives (pointercancel, focus loss), so it
+     * can't swallow an unrelated later tap. */
+    var swallowTimer = null;
+    function armSwallow() {
+      swallowClick = true;
+      clearTimeout(swallowTimer);
+      swallowTimer = setTimeout(function () { swallowClick = false; }, 400);
+    }
     screenEl.addEventListener('click', function (e) {
       if (swallowClick) {
         swallowClick = false;
@@ -428,7 +436,7 @@
       if (drag.mode === 'v') {
         if (dy < -40) {
           drag = null;
-          swallowClick = true;
+          armSwallow();
           if (opts.onSwipeUp) opts.onSwipeUp();
         }
         return;
@@ -461,7 +469,7 @@
     function endDrag() {
       if (!drag) return;
       if (drag.mode === 'h' && drag.card) {
-        if (Math.abs(drag.dx) > 10) swallowClick = true;
+        if (Math.abs(drag.dx) > 10) armSwallow();
         var w = screenEl.clientWidth;
         var commit = Math.abs(drag.dx) > w * 0.18;
         drag.card.style.transition = '';

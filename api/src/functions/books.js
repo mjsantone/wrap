@@ -10,6 +10,22 @@ function json(status, body) {
   return { status, jsonBody: body };
 }
 
+/* Best-effort per-IP limit, same shape as /api/generate's — this is an
+ * open write endpoint into Cosmos until accounts exist. */
+const WINDOW_MS = 60 * 60 * 1000;
+const MAX_PER_WINDOW = Number(process.env.BOOKS_RATE_LIMIT || 30);
+const hits = new Map();
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const times = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS);
+  if (times.length >= MAX_PER_WINDOW) return true;
+  times.push(now);
+  hits.set(ip, times);
+  if (hits.size > 10000) hits.clear();
+  return false;
+}
+
 /* POST /api/books  { story: {...} }  →  201 { id }
  * Stores a validated story as an unlisted document. Share links are
  * /b/{id}; nothing is listed publicly (the gallery is a later phase). */
@@ -20,6 +36,11 @@ app.http('books-create', {
   handler: async (request, context) => {
     const len = Number(request.headers.get('content-length') || 0);
     if (len > MAX_BODY_BYTES * 2) return json(413, { error: 'payload too large' });
+
+    const ip = (request.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
+    if (rateLimited(ip)) {
+      return json(429, { error: 'Too many books for now — try again in a bit.' });
+    }
 
     let body;
     try {
