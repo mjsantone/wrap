@@ -235,6 +235,11 @@ html, body { overscroll-behavior: none; }
 @media (prefers-reduced-motion: reduce) {
   .card, .card .fold { transition: none; }
   .card.animate-swipe-hint, .gallery-hint { animation: none; }
+  /* the ambient motion system rests too: no drift, no settle, no breathing */
+  .m-kb .card.current .img-real.loaded { animation: none; }
+  .m-settle .img-real { transform: none; transition: opacity 0.6s ease; }
+  .img-ph span { animation: none; opacity: 0.8; }
+  .m-par .card.is-dragging .canvas > .cmp:not(.cmp-image):not(.cmp-gradation):not(.cmp-veil):not(.cmp-outline) { transform: none; }
 }
 
 /* Player chrome shared by the composer and the viewer: corner pills on
@@ -279,6 +284,9 @@ html, body { overscroll-behavior: none; }
     width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
   }
   .chrome.open { transform: translateY(0); }
+  /* first-run affordance: the grab bar peeks over the bottom edge until
+   * the sheet has been discovered once (see hintSheet in the pages) */
+  .chrome.peek { transform: translateY(calc(100% - 26px)); }
   .chrome .back-btn, .pv-actions .back-btn {
     position: static; width: 100%; opacity: 1;
     background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;
@@ -371,7 +379,7 @@ html, body { overscroll-behavior: none; }
         <div class="sk-rect1"></div><div class="sk-rect2"></div><div class="sk-rect3"></div>
         <div class="sk-rect4"></div><div class="sk-rect5"></div>
       </div>
-      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.23</p>
+      <p style="position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); font-size: 10px; letter-spacing: 0.1em; color: #4a4d52;">v0.0.24</p>
     </div>
   </div>
 </div>
@@ -1327,9 +1335,22 @@ html, body { overscroll-behavior: none; }
     return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
   }
   function setSheet(open) {
+    chromeBar.classList.remove('peek');
     chromeBar.classList.toggle('open', open);
     /* the book pushes back and locks while the sheet is up */
     screenNode.classList.toggle('sheet-open', open);
+    if (open) {
+      try { localStorage.setItem('book.sheetHinted', '1'); } catch (e) {}
+      var first = chromeBar.querySelector('button:not([hidden])');
+      if (first && isPhone()) first.focus();
+    }
+  }
+  /* first book on a phone: the grab bar peeks so the sheet is discoverable */
+  function hintSheet() {
+    if (!isPhone()) return;
+    try { if (localStorage.getItem('book.sheetHinted')) return; } catch (e) {}
+    chromeBar.classList.add('peek');
+    setTimeout(function () { chromeBar.classList.remove('peek'); }, 2800);
   }
   var toastTimer = null;
   function toast(html, sticky) {
@@ -1462,6 +1483,7 @@ html, body { overscroll-behavior: none; }
     stateBox.hidden = true;
     loadedStory = BookCompiler.SAMPLE;
     player.loadBook(BookCompiler.compileBook(BookCompiler.SAMPLE, { height: BookRuntime.canvasHeight() }));
+    hintSheet();
     return;
   }
 
@@ -1583,6 +1605,7 @@ html, body { overscroll-behavior: none; }
       stateBox.hidden = true;
       loadedStory = doc.story;
       player.loadBook(book);
+      hintSheet();
       watchImages(doc.story);
     })
     .catch(function (e) {

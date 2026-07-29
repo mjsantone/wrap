@@ -40,6 +40,9 @@
     width: 44px; height: 4px; border-radius: 999px; background: rgba(244,241,234,0.3);
   }
   .chrome.open { transform: translateY(0); }
+  /* first-run affordance: the grab bar peeks over the bottom edge until
+   * the sheet has been discovered once (see hintSheet in the pages) */
+  .chrome.peek { transform: translateY(calc(100% - 26px)); }
   .chrome .back-btn, .pv-actions .back-btn {
     position: static; width: 100%; opacity: 1;
     background: rgba(255,255,255,0.08); font-size: 14px; padding: 15px;

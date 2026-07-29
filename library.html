@@ -235,6 +235,11 @@ html, body { overscroll-behavior: none; }
 @media (prefers-reduced-motion: reduce) {
   .card, .card .fold { transition: none; }
   .card.animate-swipe-hint, .gallery-hint { animation: none; }
+  /* the ambient motion system rests too: no drift, no settle, no breathing */
+  .m-kb .card.current .img-real.loaded { animation: none; }
+  .m-settle .img-real { transform: none; transition: opacity 0.6s ease; }
+  .img-ph span { animation: none; opacity: 0.8; }
+  .m-par .card.is-dragging .canvas > .cmp:not(.cmp-image):not(.cmp-gradation):not(.cmp-veil):not(.cmp-outline) { transform: none; }
 }
 
 
@@ -384,7 +389,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.23</span>
+      <span>v0.0.24</span>
     </footer>
   </div>
 </div>
