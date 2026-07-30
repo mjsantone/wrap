@@ -164,11 +164,34 @@
 
   .editor .share-toast { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 120; }
 
-  /* ---- narrow screens: stacked, preview via overlay ---- */
+  /* ---- the floating page peek ----
+   * Under 900px the side-by-side stage goes away; this small live card
+   * takes its place — always current, tap to play the whole book. */
+  .ed-peek {
+    display: none; position: fixed; z-index: 80;
+    right: 14px; bottom: calc(16px + env(safe-area-inset-bottom));
+    width: 104px; aspect-ratio: 640 / 910;
+    border: 1px solid rgba(244,241,234,0.18); border-radius: 10px; overflow: hidden;
+    background: #000; box-shadow: 0 12px 36px rgba(0,0,0,0.65);
+    padding: 0; cursor: pointer;
+  }
+  .ed-peek .canvas { pointer-events: none; }
+
+  /* ---- narrow screens: stacked, live peek + preview overlay ---- */
   @media (max-width: 900px) {
     .ed-stage { display: none; }
-    .ed-panel { max-width: none; }
+    .ed-peek { display: block; }
+    .ed-panel { max-width: none; padding-bottom: 170px; /* clear the peek */ }
     .ed-top { flex-wrap: wrap; }
+  }
+  @media (max-width: 640px), (hover: none) and (pointer: coarse) {
+    /* 16px inputs stop iOS Safari from zooming the page on focus */
+    .ed-field input[type="text"], .ed-field textarea, .ed-name { font-size: 16px; }
+    /* thumb-sized page operations */
+    .ed-icon { width: 40px; height: 40px; font-size: 16px; }
+    .ed-seg button { padding: 9px 15px; }
+    /* the peek is the preview on phones — the button is redundant */
+    #previewBtn { display: none; }
   }
 </style>
 
@@ -191,6 +214,8 @@
     <section class="ed-stage"><div class="ed-card" id="stageCard"></div></section>
   </main>
 </div>
+
+<button class="ed-peek" id="peekCard" aria-label="Preview this page — tap to play the book"></button>
 
 <div class="ed-typemenu" id="typeMenu" hidden></div>
 
@@ -362,11 +387,14 @@
     rail.appendChild(add);
   }
 
+  var peekCard = document.getElementById('peekCard');
   function renderStage() {
     var book = compiled();
     var node = book.cards[Math.min(sel, book.cards.length - 1)];
     var w = stageCard.clientWidth || 320;
     renderCardInto(stageCard, node, w / 640);
+    /* the floating peek is the phone's live stage */
+    if (peekCard.offsetWidth) renderCardInto(peekCard, node, peekCard.offsetWidth / 640);
   }
 
   /* refresh scopes: text edits touch one card; structure redraws everything */
@@ -678,7 +706,7 @@
   /* ---------- full-book preview ---------- */
   var overlay = document.getElementById('previewOverlay');
   var pvPlayer = null;
-  document.getElementById('previewBtn').addEventListener('click', function () {
+  function showPreview() {
     if (!pvPlayer) {
       pvPlayer = BookRuntime.createPlayer({
         screen: document.getElementById('pvScreen'),
@@ -694,7 +722,11 @@
     }
     overlay.hidden = false;
     pvPlayer.loadBook(BookCompiler.compileBook(story, { height: 910, date: new Date().toISOString() }));
-  });
+    /* open on the page being edited, not the cover */
+    pvPlayer.showCard(Math.min(sel, pvPlayer.cardCount() - 1));
+  }
+  document.getElementById('previewBtn').addEventListener('click', showPreview);
+  peekCard.addEventListener('click', showPreview);
   document.getElementById('pvClose').addEventListener('click', function () { overlay.hidden = true; });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !overlay.hidden) overlay.hidden = true;
