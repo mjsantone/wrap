@@ -389,15 +389,22 @@ html, body { overscroll-behavior: none; }
   .ed-typemenu button:hover { background: rgba(255,255,255,0.07); }
   .ed-typemenu[hidden] { display: none; }
 
-  /* ---- main split ---- */
-  .ed-main { flex: 1; display: flex; align-items: flex-start; gap: 0; }
-  .ed-panel { flex: 1 1 460px; max-width: 560px; padding: 20px 16px 80px; }
+  /* ---- main split ----
+   * One centered content column: the top bar and rail share its edges
+   * (via matching padding), the fields sit left, and the preview card
+   * grows with the window instead of stranding the right half. */
+  .ed-top, .ed-rail { padding-left: max(16px, calc((100vw - 1240px) / 2)); padding-right: max(16px, calc((100vw - 1240px) / 2)); }
+  .ed-main { flex: 1; display: flex; align-items: flex-start; gap: 28px; width: 100%; max-width: 1240px; margin: 0 auto; }
+  .ed-panel { flex: 1 1 520px; max-width: 620px; padding: 24px 16px 90px; }
   .ed-stage {
-    flex: 1 1 380px; position: sticky; top: 118px;
-    display: flex; justify-content: center; padding: 24px 16px;
+    flex: 1 1 440px; position: sticky; top: 118px;
+    display: flex; justify-content: center; padding: 28px 16px;
   }
   .ed-card {
-    position: relative; width: min(320px, 38vw); aspect-ratio: 640 / 910;
+    position: relative;
+    /* as large as the column and the viewport height allow */
+    width: min(clamp(300px, 32vw, 470px), calc((100vh - 190px) * 640 / 910));
+    aspect-ratio: 640 / 910;
     border-radius: 14px; overflow: hidden; background: #000;
     box-shadow: 0 18px 60px rgba(0,0,0,0.55);
   }
@@ -473,7 +480,7 @@ html, body { overscroll-behavior: none; }
     <a class="ed-wordmark" href="/">BOOK<b>.</b></a>
     <input class="ed-name" id="bookName" maxlength="120" placeholder="Name your book" autocomplete="off">
     <span class="ed-saved" id="saveState">New draft</span>
-    <span class="ed-saved" style="opacity:0.65">v0.0.26</span>
+    <span class="ed-saved" style="opacity:0.65">v0.0.27</span>
     <div style="display:flex; gap:8px;">
       <button class="ed-btn" id="previewBtn">Preview</button>
       <button class="ed-btn primary" id="shareBtn">Share</button>
