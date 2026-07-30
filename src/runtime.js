@@ -142,6 +142,8 @@
       el.className = 'cmp';
       applyCss(el, node.css);
       el.innerHTML = (node.text || '').replace(/\n/g, ' ');
+      /* source-field tag: the editor's direct selection reads this */
+      if (node.f) el.setAttribute('data-f', node.f);
     }
     else if (t === 'box' || t === 'background') {
       el = document.createElement('div');
@@ -157,6 +159,7 @@
         label = String(node.css.content).replace(/^['"]|['"]$/g, '');
       }
       el.textContent = label || '';
+      if (node.f) el.setAttribute('data-f', node.f);
     }
     else if (t === 'action') {
       el = document.createElement('a');

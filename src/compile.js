@@ -27,7 +27,13 @@
       lbl: image.label || '', url: image.url || '', slot: slot
     };
   }
-  function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
+  /* f: the story field this text came from ("title", "body", …) — the
+   * editor uses it for direct selection/editing on the preview card */
+  function tb(text, css, f) {
+    var n = { t: 'textbox', text: text, css: css };
+    if (f) n.f = f;
+    return n;
+  }
 
   /* Typographic punctuation: curly quotes, em dashes, real ellipses —
    * applied to every human-readable string before it reaches a page. */
@@ -180,8 +186,8 @@
       var dsize = Math.round(RAMP.display * scaleMul);
       var tsize = fitFont(title, dsize, 12);
       var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
-      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts))));
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts)), 'kicker'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'quote') {
@@ -192,9 +198,9 @@
       var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i class="q-attr">— ' + escapeHtml(smarten(c.attribution)) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
-      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.body : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.body : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts)), 'lines'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'prose') {
@@ -204,10 +210,10 @@
       }
       var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts))));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts)), 'kicker'));
+      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
-        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts))));
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts)), 'body'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'product') {
@@ -217,12 +223,12 @@
       }
       var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
       var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts)), 'kicker'));
+      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       var pbody = escapeHtml(body) + (c.price ? ' <b>' + escapeHtml(c.price) + '</b>' : '');
-      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
+      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts)), 'body'));
       if (c.button) {
-        k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
+        k.push({ t: 'button', f: 'button', label: (c.button || '').toUpperCase(), css: {
           position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
           color: '#fff', border: '3px solid #fff', 'font-family': MONT, 'font-size': '21px',
           'font-weight': '600', 'letter-spacing': '0.14em', 'z-index': '20'
@@ -238,13 +244,13 @@
       }
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
-      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
-      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
+      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts)), 'body'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
-      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' })));
+      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' }), 'title'));
       return { bg: '#161718', k: k };
     }
     return null;

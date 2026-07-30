@@ -105,7 +105,16 @@
     border-radius: 14px; overflow: hidden; background: #000;
     box-shadow: 0 18px 60px rgba(0,0,0,0.55);
   }
-  .ed-card .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; pointer-events: none; }
+  /* the stage is direct-manipulation: text edits in place, everything
+   * else clicks through to its field in the panel */
+  .ed-card .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; }
+  .ed-card [data-f] { cursor: text; }
+  .ed-card [data-f]:hover { outline: 2px dashed rgba(255,90,54,0.55); outline-offset: 3px; }
+  .ed-card [data-f][contenteditable] { outline: 2px solid rgba(255,90,54,0.85); outline-offset: 3px; cursor: text; }
+  .ed-card .cmp-image, .ed-card .cmp-action, .ed-card .cmp-youtube, .ed-card .cmp-map { cursor: pointer; }
+  /* a tapped-through field flashes so the eye lands on it */
+  @keyframes edFlash { 0% { border-color: var(--accent); } 100% { border-color: var(--line); } }
+  .ed-field .flash { animation: edFlash 1.2s ease-out; }
 
   /* ---- panel widgets ---- */
   .ed-cardbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
@@ -389,6 +398,9 @@
 
   var peekCard = document.getElementById('peekCard');
   function renderStage() {
+    /* never mid-edit: a re-render would tear the caret out from under
+     * the writer — the blur handler re-renders when they're done */
+    if (stageCard.querySelector('[contenteditable]')) return;
     var book = compiled();
     var node = book.cards[Math.min(sel, book.cards.length - 1)];
     var w = stageCard.clientWidth || 320;
@@ -396,6 +408,106 @@
     /* the floating peek is the phone's live stage */
     if (peekCard.offsetWidth) renderCardInto(peekCard, node, peekCard.offsetWidth / 640);
   }
+
+  /* ---------- direct manipulation on the stage ----------
+   * Text on the preview card edits in place (contenteditable, synced
+   * back into the story); pictures, buttons, links, and composite text
+   * click through to their field in the panel. */
+
+  /* thumbnail + draft only — a full refresh would tear down the
+   * contenteditable mid-keystroke */
+  var thumbTimer = null;
+  function refreshThumb() {
+    clearTimeout(thumbTimer);
+    thumbTimer = setTimeout(function () {
+      var book = compiled();
+      var thumb = rail.querySelector('[data-idx="' + sel + '"]');
+      if (thumb) {
+        var keep = thumb.querySelector('.t-label');
+        renderCardInto(thumb, book.cards[sel], 58 / 640);
+        if (keep) thumb.appendChild(keep);
+      }
+      if (peekCard.offsetWidth) {
+        var node = book.cards[Math.min(sel, book.cards.length - 1)];
+        renderCardInto(peekCard, node, peekCard.offsetWidth / 640);
+      }
+      saveDraft();
+    }, 250);
+  }
+
+  function focusField(key) {
+    var input = panel.querySelector('[data-key="' + key + '"]');
+    if (!input) return;
+    input.focus();
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input.classList.remove('flash');
+    void input.offsetWidth; /* restart the animation */
+    input.classList.add('flash');
+  }
+
+  /* fields simple enough to edit right on the card — everything else
+   * (quote lines with attribution, product body with price) round-trips
+   * through the panel where the parts stay separate */
+  function inlineEditable(c, f) {
+    if (f === 'title' || f === 'kicker') return true;
+    return f === 'body' && (c.type === 'prose' || c.type === 'video');
+  }
+
+  function startInline(el, f) {
+    if (!stageCard.contains(el)) {
+      el = stageCard.querySelector('[data-f="' + f + '"]');
+      if (!el) return;
+    }
+    var c = story.cards[sel];
+    el.contentEditable = 'plaintext-only';
+    if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+    /* show the raw text while editing — smartening returns on blur */
+    el.textContent = c[f] == null ? '' : c[f];
+    el.focus();
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    var s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+
+    function onInput() {
+      var v = el.textContent;
+      c[f] = v.trim().length ? v : null;
+      var input = panel.querySelector('[data-key="' + f + '"]');
+      if (input) input.value = v; /* mirror without re-rendering */
+      refreshThumb();
+    }
+    function onKey(e) {
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    }
+    function onBlur() {
+      el.removeEventListener('input', onInput);
+      el.removeEventListener('keydown', onKey);
+      el.removeEventListener('blur', onBlur);
+      el.removeAttribute('contenteditable');
+      refreshSoon(false); /* proper typography comes back */
+    }
+    el.addEventListener('input', onInput);
+    el.addEventListener('keydown', onKey);
+    el.addEventListener('blur', onBlur);
+  }
+
+  stageCard.addEventListener('click', function (e) {
+    if (sel >= story.cards.length) return; /* the colophon sets itself */
+    e.preventDefault();
+    var c = story.cards[sel];
+    var t = e.target.closest('[data-f]');
+    if (t) {
+      var f = t.getAttribute('data-f');
+      if (t.hasAttribute('contenteditable')) return; /* already editing */
+      if (inlineEditable(c, f)) return startInline(t, f);
+      return focusField(f);
+    }
+    if (e.target.closest('.cmp-youtube') || e.target.closest('.cmp-action')) return focusField('url');
+    if (e.target.closest('.cmp-map')) return focusField('address');
+    if (e.target.closest('.cmp-image')) return focusField('imageLabel');
+  });
 
   /* refresh scopes: text edits touch one card; structure redraws everything */
   var refreshTimer = null;
@@ -430,6 +542,7 @@
     if (!(opts && opts.area)) input.type = 'text';
     input.id = 'edField' + (++fieldSeq);
     lb.htmlFor = input.id;
+    if (opts && opts.key) input.setAttribute('data-key', opts.key);
     input.value = value == null ? '' : value;
     if (opts && opts.maxlen) input.maxLength = opts.maxlen;
     if (opts && opts.placeholder) input.placeholder = opts.placeholder;
@@ -497,7 +610,7 @@
     /* text fields for this card type */
     (FIELDS[c.type] || []).forEach(function (key) {
       var value = key === 'lines' ? (c.lines || []).join('\n') : c[key];
-      var f = field(LABELS[key], value, { area: AREAS[key], maxlen: MAXLEN[key] });
+      var f = field(LABELS[key], value, { area: AREAS[key], maxlen: MAXLEN[key], key: key });
       f.input.addEventListener('input', function () {
         var v = f.input.value;
         if (key === 'lines') c.lines = v.split('\n').map(function (s) { return s; }).filter(function (s) { return s.trim().length; });
@@ -541,7 +654,7 @@
           sec.appendChild(row);
         }
         var lf = field('Scene — what the photograph shows', c.image.label, {
-          placeholder: 'weathered lighthouse on a cliff at dusk', maxlen: MAXLEN.imageLabel,
+          placeholder: 'weathered lighthouse on a cliff at dusk', maxlen: MAXLEN.imageLabel, key: 'imageLabel',
           hint: 'Brief a photographer: subject, setting, light. No names, no readable text.'
         });
         lf.input.addEventListener('input', function () {

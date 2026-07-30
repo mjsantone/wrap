@@ -408,7 +408,16 @@ html, body { overscroll-behavior: none; }
     border-radius: 14px; overflow: hidden; background: #000;
     box-shadow: 0 18px 60px rgba(0,0,0,0.55);
   }
-  .ed-card .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; pointer-events: none; }
+  /* the stage is direct-manipulation: text edits in place, everything
+   * else clicks through to its field in the panel */
+  .ed-card .canvas { position: absolute; top: 0; left: 0; width: 640px; height: 910px; transform-origin: 0 0; }
+  .ed-card [data-f] { cursor: text; }
+  .ed-card [data-f]:hover { outline: 2px dashed rgba(255,90,54,0.55); outline-offset: 3px; }
+  .ed-card [data-f][contenteditable] { outline: 2px solid rgba(255,90,54,0.85); outline-offset: 3px; cursor: text; }
+  .ed-card .cmp-image, .ed-card .cmp-action, .ed-card .cmp-youtube, .ed-card .cmp-map { cursor: pointer; }
+  /* a tapped-through field flashes so the eye lands on it */
+  @keyframes edFlash { 0% { border-color: var(--accent); } 100% { border-color: var(--line); } }
+  .ed-field .flash { animation: edFlash 1.2s ease-out; }
 
   /* ---- panel widgets ---- */
   .ed-cardbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
@@ -503,7 +512,7 @@ html, body { overscroll-behavior: none; }
     <a class="ed-wordmark" href="/">BOOK<b>.</b></a>
     <input class="ed-name" id="bookName" maxlength="120" placeholder="Name your book" autocomplete="off">
     <span class="ed-saved" id="saveState">New draft</span>
-    <span class="ed-saved" style="opacity:0.65">v0.0.28</span>
+    <span class="ed-saved" style="opacity:0.65">v0.0.29</span>
     <div style="display:flex; gap:8px;">
       <button class="ed-btn" id="previewBtn">Preview</button>
       <button class="ed-btn primary" id="shareBtn">Share</button>
@@ -687,6 +696,8 @@ html, body { overscroll-behavior: none; }
       el.className = 'cmp';
       applyCss(el, node.css);
       el.innerHTML = (node.text || '').replace(/\n/g, ' ');
+      /* source-field tag: the editor's direct selection reads this */
+      if (node.f) el.setAttribute('data-f', node.f);
     }
     else if (t === 'box' || t === 'background') {
       el = document.createElement('div');
@@ -702,6 +713,7 @@ html, body { overscroll-behavior: none; }
         label = String(node.css.content).replace(/^['"]|['"]$/g, '');
       }
       el.textContent = label || '';
+      if (node.f) el.setAttribute('data-f', node.f);
     }
     else if (t === 'action') {
       el = document.createElement('a');
@@ -1213,7 +1225,13 @@ html, body { overscroll-behavior: none; }
       lbl: image.label || '', url: image.url || '', slot: slot
     };
   }
-  function tb(text, css) { return { t: 'textbox', text: text, css: css }; }
+  /* f: the story field this text came from ("title", "body", …) — the
+   * editor uses it for direct selection/editing on the preview card */
+  function tb(text, css, f) {
+    var n = { t: 'textbox', text: text, css: css };
+    if (f) n.f = f;
+    return n;
+  }
 
   /* Typographic punctuation: curly quotes, em dashes, real ellipses —
    * applied to every human-readable string before it reaches a page. */
@@ -1366,8 +1384,8 @@ html, body { overscroll-behavior: none; }
       var dsize = Math.round(RAMP.display * scaleMul);
       var tsize = fitFont(title, dsize, 12);
       var O = origin({ top: 110, middle: 360, bottom: 590, d: 'bottom' });
-      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts))));
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts))));
+      k.push(tb(escapeHtml(title), typo(O + (dsize - tsize), tsize, FRAUNCES, ext({ left: 31, width: 580, lh: 1.04, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(O + (dsize - tsize) + Math.round(tsize * 1.2) + 30, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1, lh: 1.6 }, aOpts)), 'kicker'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'quote') {
@@ -1378,9 +1396,9 @@ html, body { overscroll-behavior: none; }
       var lines = (c.lines || []).map(function (l) { return escapeHtml(smarten(l)); });
       if (c.attribution) lines.push('<i class="q-attr">— ' + escapeHtml(smarten(c.attribution)) + '</i>');
       var qO = origin({ top: 110, middle: title ? 120 : 200, bottom: title ? 380 : 470, d: 'middle' });
-      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(qO, Math.round(40 * scaleMul), FRAUNCES, ext({ weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       k.push(tb('<p>' + lines.join('<br>') + '</p>',
-        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.body : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts))));
+        typo(qO + (title ? 120 : 0), lines.length > 10 ? RAMP.body : RAMP.quote, SLAB, ext({ left: 80, width: 480, lh: 1.55, wrap: 'pretty' }, aOpts)), 'lines'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'prose') {
@@ -1390,10 +1408,10 @@ html, body { overscroll-behavior: none; }
       }
       var psize = fitFont(title, Math.round(RAMP.title * scaleMul), 16);
       var pO = origin({ top: 100, middle: kicker ? 150 : 170, bottom: 460, d: 'middle' });
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts))));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(pO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts)), 'kicker'));
+      k.push(tb(escapeHtml(title), typo(pO + (kicker ? 46 : 0), psize, FRAUNCES, ext({ left: 30, width: 580, lh: 1.08, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       k.push(tb(L.align === 'left' && body.length > 90 ? dropCap(body) : escapeHtml(body),
-        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts))));
+        typo(pO + (kicker ? 46 : 0) + Math.round(psize * 1.25) + 42, body.length > 330 ? RAMP.small : RAMP.body, SLAB, ext({ left: 60, width: 520, lh: 1.52, wrap: 'pretty' }, aOpts)), 'body'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'product') {
@@ -1403,12 +1421,12 @@ html, body { overscroll-behavior: none; }
       }
       var prsize = fitFont(title, Math.round(50 * scaleMul), 18);
       var prO = origin({ top: 120, middle: 320, bottom: 540, d: 'bottom' });
-      if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts))));
-      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
+      if (kicker) k.push(tb(escapeHtml(kicker), typo(prO, RAMP.kicker, MONT, ext({ ls: '0.3em', caps: 1 }, aOpts)), 'kicker'));
+      k.push(tb(escapeHtml(title), typo(prO + 46, prsize, FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
       var pbody = escapeHtml(body) + (c.price ? ' <b>' + escapeHtml(c.price) + '</b>' : '');
-      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
+      k.push(tb(pbody, typo(prO + 128, RAMP.body - 1, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts)), 'body'));
       if (c.button) {
-        k.push({ t: 'button', label: (c.button || '').toUpperCase(), css: {
+        k.push({ t: 'button', f: 'button', label: (c.button || '').toUpperCase(), css: {
           position: 'absolute', top: (prO + 252) + 'px', left: '100px', width: '440px', height: '68px',
           color: '#fff', border: '3px solid #fff', 'font-family': MONT, 'font-size': '21px',
           'font-weight': '600', 'letter-spacing': '0.14em', 'z-index': '20'
@@ -1424,13 +1442,13 @@ html, body { overscroll-behavior: none; }
       }
       k.push({ t: 'youtube', url: c.url || '', css: { position: 'absolute', top: mid(355) + 'px', left: '270px', width: '100px', height: '100px', 'z-index': '100' } });
       var vO = origin({ top: 110, middle: 500, bottom: 560, d: 'bottom' });
-      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts))));
-      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts))));
+      if (title) k.push(tb(escapeHtml(title), typo(vO, fitFont(title, Math.round(46 * scaleMul), 18), FRAUNCES, ext({ left: 30, width: 580, weight: 550, wrap: 'balance' }, aOpts)), 'title'));
+      if (body) k.push(tb(escapeHtml(body), typo(vO + 92, RAMP.small, SLAB, ext({ left: 60, width: 520, lh: 1.4, wrap: 'pretty' }, aOpts)), 'body'));
       return { bg: pic ? inkBg(pic) : ink, k: k };
     }
     if (t === 'map') {
       k.push({ t: 'map', value: c.address || '', css: FULL });
-      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' })));
+      if (title) k.push(tb(escapeHtml(title), typo(70, fitFont(title, RAMP.title, 16), FRAUNCES, { weight: 550, wrap: 'balance' }), 'title'));
       return { bg: '#161718', k: k };
     }
     return null;
@@ -1753,6 +1771,9 @@ html, body { overscroll-behavior: none; }
 
   var peekCard = document.getElementById('peekCard');
   function renderStage() {
+    /* never mid-edit: a re-render would tear the caret out from under
+     * the writer — the blur handler re-renders when they're done */
+    if (stageCard.querySelector('[contenteditable]')) return;
     var book = compiled();
     var node = book.cards[Math.min(sel, book.cards.length - 1)];
     var w = stageCard.clientWidth || 320;
@@ -1760,6 +1781,106 @@ html, body { overscroll-behavior: none; }
     /* the floating peek is the phone's live stage */
     if (peekCard.offsetWidth) renderCardInto(peekCard, node, peekCard.offsetWidth / 640);
   }
+
+  /* ---------- direct manipulation on the stage ----------
+   * Text on the preview card edits in place (contenteditable, synced
+   * back into the story); pictures, buttons, links, and composite text
+   * click through to their field in the panel. */
+
+  /* thumbnail + draft only — a full refresh would tear down the
+   * contenteditable mid-keystroke */
+  var thumbTimer = null;
+  function refreshThumb() {
+    clearTimeout(thumbTimer);
+    thumbTimer = setTimeout(function () {
+      var book = compiled();
+      var thumb = rail.querySelector('[data-idx="' + sel + '"]');
+      if (thumb) {
+        var keep = thumb.querySelector('.t-label');
+        renderCardInto(thumb, book.cards[sel], 58 / 640);
+        if (keep) thumb.appendChild(keep);
+      }
+      if (peekCard.offsetWidth) {
+        var node = book.cards[Math.min(sel, book.cards.length - 1)];
+        renderCardInto(peekCard, node, peekCard.offsetWidth / 640);
+      }
+      saveDraft();
+    }, 250);
+  }
+
+  function focusField(key) {
+    var input = panel.querySelector('[data-key="' + key + '"]');
+    if (!input) return;
+    input.focus();
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input.classList.remove('flash');
+    void input.offsetWidth; /* restart the animation */
+    input.classList.add('flash');
+  }
+
+  /* fields simple enough to edit right on the card — everything else
+   * (quote lines with attribution, product body with price) round-trips
+   * through the panel where the parts stay separate */
+  function inlineEditable(c, f) {
+    if (f === 'title' || f === 'kicker') return true;
+    return f === 'body' && (c.type === 'prose' || c.type === 'video');
+  }
+
+  function startInline(el, f) {
+    if (!stageCard.contains(el)) {
+      el = stageCard.querySelector('[data-f="' + f + '"]');
+      if (!el) return;
+    }
+    var c = story.cards[sel];
+    el.contentEditable = 'plaintext-only';
+    if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+    /* show the raw text while editing — smartening returns on blur */
+    el.textContent = c[f] == null ? '' : c[f];
+    el.focus();
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    var s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+
+    function onInput() {
+      var v = el.textContent;
+      c[f] = v.trim().length ? v : null;
+      var input = panel.querySelector('[data-key="' + f + '"]');
+      if (input) input.value = v; /* mirror without re-rendering */
+      refreshThumb();
+    }
+    function onKey(e) {
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); el.blur(); }
+    }
+    function onBlur() {
+      el.removeEventListener('input', onInput);
+      el.removeEventListener('keydown', onKey);
+      el.removeEventListener('blur', onBlur);
+      el.removeAttribute('contenteditable');
+      refreshSoon(false); /* proper typography comes back */
+    }
+    el.addEventListener('input', onInput);
+    el.addEventListener('keydown', onKey);
+    el.addEventListener('blur', onBlur);
+  }
+
+  stageCard.addEventListener('click', function (e) {
+    if (sel >= story.cards.length) return; /* the colophon sets itself */
+    e.preventDefault();
+    var c = story.cards[sel];
+    var t = e.target.closest('[data-f]');
+    if (t) {
+      var f = t.getAttribute('data-f');
+      if (t.hasAttribute('contenteditable')) return; /* already editing */
+      if (inlineEditable(c, f)) return startInline(t, f);
+      return focusField(f);
+    }
+    if (e.target.closest('.cmp-youtube') || e.target.closest('.cmp-action')) return focusField('url');
+    if (e.target.closest('.cmp-map')) return focusField('address');
+    if (e.target.closest('.cmp-image')) return focusField('imageLabel');
+  });
 
   /* refresh scopes: text edits touch one card; structure redraws everything */
   var refreshTimer = null;
@@ -1794,6 +1915,7 @@ html, body { overscroll-behavior: none; }
     if (!(opts && opts.area)) input.type = 'text';
     input.id = 'edField' + (++fieldSeq);
     lb.htmlFor = input.id;
+    if (opts && opts.key) input.setAttribute('data-key', opts.key);
     input.value = value == null ? '' : value;
     if (opts && opts.maxlen) input.maxLength = opts.maxlen;
     if (opts && opts.placeholder) input.placeholder = opts.placeholder;
@@ -1861,7 +1983,7 @@ html, body { overscroll-behavior: none; }
     /* text fields for this card type */
     (FIELDS[c.type] || []).forEach(function (key) {
       var value = key === 'lines' ? (c.lines || []).join('\n') : c[key];
-      var f = field(LABELS[key], value, { area: AREAS[key], maxlen: MAXLEN[key] });
+      var f = field(LABELS[key], value, { area: AREAS[key], maxlen: MAXLEN[key], key: key });
       f.input.addEventListener('input', function () {
         var v = f.input.value;
         if (key === 'lines') c.lines = v.split('\n').map(function (s) { return s; }).filter(function (s) { return s.trim().length; });
@@ -1905,7 +2027,7 @@ html, body { overscroll-behavior: none; }
           sec.appendChild(row);
         }
         var lf = field('Scene — what the photograph shows', c.image.label, {
-          placeholder: 'weathered lighthouse on a cliff at dusk', maxlen: MAXLEN.imageLabel,
+          placeholder: 'weathered lighthouse on a cliff at dusk', maxlen: MAXLEN.imageLabel, key: 'imageLabel',
           hint: 'Brief a photographer: subject, setting, light. No names, no readable text.'
         });
         lf.input.addEventListener('input', function () {
