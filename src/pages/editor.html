@@ -5,8 +5,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>Write a book — BOOK</title>
 
+<link rel="stylesheet" href="fonts.css">
 <style>
-/*@inline src/fonts.css*/
 /*@inline src/runtime.css*/
 /*@inline src/chrome.css*/
 
@@ -211,22 +211,16 @@
 /*@inline src/runtime.js*/
 </script>
 <script>
+/*@inline src/chrome.js*/
+</script>
+<script>
 /*@inline src/compile.js*/
 </script>
 <script>
 (function () {
   'use strict';
 
-  var LONG_API = '@LONGAPI@';
-  async function apiFetch(path, opts) {
-    if (LONG_API) {
-      try {
-        var r = await fetch(LONG_API + path, opts);
-        if (r.status !== 404) return r;
-      } catch (e) {}
-    }
-    return fetch(path, opts);
-  }
+  var apiFetch = BookChrome.apiFetch;
 
   /* ---------- the story being written ---------- */
   var STARTER = {
@@ -613,11 +607,14 @@
     select(sel + 1);
     saveDraft();
   }
+  var lastDeleted = null;
   function remove() {
     if (sel === 0) return;
+    lastDeleted = { card: story.cards[sel], at: sel };
     story.cards.splice(sel, 1);
     select(Math.min(sel, story.cards.length - 1));
     saveDraft();
+    toast('Page deleted — <button type="button" id="undoDelete">Undo</button>');
   }
 
   var typeMenu = document.getElementById('typeMenu');
@@ -698,13 +695,7 @@
 
   /* ---------- share: store, then paint the pictures ---------- */
   var shareToast = document.getElementById('shareToast');
-  var toastTimer = null;
-  function toast(html, sticky) {
-    shareToast.innerHTML = html;
-    shareToast.hidden = false;
-    clearTimeout(toastTimer);
-    if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
-  }
+  var toast = BookChrome.toaster(shareToast);
 
   function setImageNote(text) {
     var note = document.getElementById('imgNote');
@@ -802,6 +793,18 @@
       }
     } catch (e) {}
   }
+  /* undo a page deletion — one step, straight back where it was */
+  shareToast.addEventListener('click', function (e) {
+    if (!e.target.closest('#undoDelete') || !lastDeleted) return;
+    if (story.cards.length >= 12) { toast('A book holds at most 12 pages.'); return; }
+    var at = Math.min(lastDeleted.at, story.cards.length);
+    story.cards.splice(at, 0, lastDeleted.card);
+    lastDeleted = null;
+    shareToast.hidden = true;
+    select(at);
+    saveDraft();
+  });
+
   /* the shared book can go straight onto the public shelf, like the composer's */
   shareToast.addEventListener('click', async function (e) {
     var gb = e.target.closest('#galleryBtn');
