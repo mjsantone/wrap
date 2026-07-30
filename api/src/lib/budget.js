@@ -11,13 +11,14 @@
  * Fails OPEN on any store error: a Cosmos hiccup must degrade to
  * "no cap today" rather than take generation down with it. */
 
-const { getContainer } = require('./cosmos');
-
 async function underDailyBudget(kind, limit, container) {
   if (!limit || limit <= 0) return true; /* unset or 0 disables the breaker */
   const id = 'budget-' + kind + '-' + new Date().toISOString().slice(0, 10);
   try {
-    const c = container || getContainer();
+    /* lazy: tests inject a container and stay hermetic (no @azure/cosmos
+     * needed), and a missing/broken dependency fails open like any other
+     * store error */
+    const c = container || require('./cosmos').getContainer();
     try {
       const { resource } = await c.item(id, id).patch([{ op: 'incr', path: '/n', value: 1 }]);
       return !resource || resource.n <= limit;
