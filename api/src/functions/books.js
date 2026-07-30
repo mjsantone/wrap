@@ -52,6 +52,23 @@ app.http('books-create', {
     const result = validateStory(body && body.story);
     if (!result.ok) return json(400, { error: result.error });
 
+    /* The same gate the gallery uses, applied at the door when Content
+     * Safety is configured — hand authoring makes /b/ links an open text
+     * host otherwise. Unlisted links are lower stakes than the public
+     * shelf, so this check fails open on service errors (publish stays
+     * fail-closed). */
+    if (moderation.isConfigured()) {
+      try {
+        const verdict = await moderation.check(result.story);
+        if (!verdict.allowed) {
+          context.log(`create rejected category=${verdict.category} severity=${verdict.severity}`);
+          return json(422, { error: 'This story can’t be shared.' });
+        }
+      } catch (err) {
+        context.error('moderation at create failed', err);
+      }
+    }
+
     const doc = {
       id: newId(),
       formatVersion: 1,
