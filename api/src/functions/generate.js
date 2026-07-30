@@ -3,6 +3,7 @@
 const { app } = require('@azure/functions');
 const { generateStory, foundryResource, MAX_STORY_CHARS } = require('../lib/claude');
 const { validateStory } = require('../lib/story');
+const budget = require('../lib/budget');
 
 function json(status, body) {
   return { status, jsonBody: body };
@@ -49,6 +50,10 @@ app.http('generate', {
     const ip = (request.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
     if (rateLimited(ip)) {
       return json(429, { error: 'Too many books for now — try again in a bit.' });
+    }
+    /* the global money guard behind the per-IP speed bump */
+    if (!(await budget.underDailyBudget('generate', Number(process.env.GENERATION_DAILY_BUDGET || 300)))) {
+      return json(429, { error: 'Today’s book budget is spent — come back tomorrow.' });
     }
 
     try {

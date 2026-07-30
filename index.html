@@ -340,9 +340,7 @@ html, body { overscroll-behavior: none; }
   .loading .sk-spinner-wave { margin: 0; }
   .loading-note { color: var(--muted); font-size: 12px; margin-top: 16px; font-family: 'Montserrat', sans-serif; letter-spacing: 0.2em; text-transform: uppercase; }
   .loading[hidden] { display: none; }
-  .alt-entry { margin: 12px 2px 0; text-align: right; font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.06em; }
-  .alt-entry a { color: var(--muted); text-decoration: none; }
-  .alt-entry a:hover { color: var(--accent); }
+  .actions a.btn { text-decoration: none; text-align: center; box-sizing: border-box; }
 
   .footer {
     margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(244,241,234,0.14);
@@ -461,8 +459,8 @@ html, body { overscroll-behavior: none; }
         placeholder="How my grandparents met in Lisbon in 1962…"></textarea>
       <div class="actions">
         <button class="btn btn-primary" id="generateBtn">Book it</button>
+        <a class="btn btn-ghost" href="editor.html">Write it yourself</a>
       </div>
-      <p class="alt-entry"><a href="editor.html">or write it yourself →</a></p>
     </div>
 
     <div class="loading" id="loading" hidden>
@@ -478,7 +476,7 @@ html, body { overscroll-behavior: none; }
 
     <footer class="footer">
       <span>Set in Fraunces</span>
-      <span>v0.0.29</span>
+      <span>v0.0.30</span>
     </footer>
   </div>
 </div>

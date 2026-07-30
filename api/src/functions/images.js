@@ -4,6 +4,7 @@ const { app } = require('@azure/functions');
 const { getContainer } = require('../lib/cosmos');
 const { newId, ID_PATTERN } = require('../lib/story');
 const images = require('../lib/images');
+const budget = require('../lib/budget');
 
 function json(status, body) {
   return { status, jsonBody: body };
@@ -68,6 +69,11 @@ app.http('books-images', {
     const ip = (request.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
     if (rateLimited(ip)) {
       return json(429, { error: 'Too many pictures for now — try again in a bit.' });
+    }
+    /* images bill per call from any viewer — the daily breaker caps the
+     * worst a hostile crowd can spend */
+    if (!(await budget.underDailyBudget('images', Number(process.env.IMAGES_DAILY_BUDGET || 600)))) {
+      return json(429, { error: 'Today’s picture budget is spent — the book keeps its ink pages for now.' });
     }
 
     let result;
