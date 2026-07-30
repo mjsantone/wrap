@@ -8,8 +8,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>BOOK</title>
 
+<link rel="stylesheet" href="fonts.css">
+<script>
+/* under the /b/{id} rewrite the relative href misses — repoint at the root copy */
+if (/\/b\//.test(location.pathname)) {
+  var fontsLink = document.querySelector('link[href="fonts.css"]');
+  if (fontsLink) fontsLink.href = '/fonts.css';
+}
+</script>
 <style>
-/*@inline src/fonts.css*/
 /*@inline src/runtime.css*/
 /*@inline src/chrome.css*/
 
@@ -85,6 +92,9 @@
 /*@inline src/runtime.js*/
 </script>
 <script>
+/*@inline src/chrome.js*/
+</script>
+<script>
 /*@inline src/compile.js*/
 </script>
 <script>
@@ -95,39 +105,17 @@
   var stateMsg = document.getElementById('stateMsg');
   var stateSpinner = document.getElementById('stateSpinner');
 
-  /* ---------- player chrome: same pull-up sheet as the composer ---------- */
+  /* ---------- player chrome: same pull-up sheet as the composer ----------
+   * gestures, scrim, and the first-run peek live in BookChrome.sheet */
   var chromeBar = document.getElementById('chromeBar');
   var screenNode = document.getElementById('screen');
   var shareToast = document.getElementById('shareToast');
   var lastPageSeen = -1;
-  function isPhone() {
-    return window.matchMedia('(max-width: 640px), (hover: none) and (pointer: coarse)').matches;
-  }
-  function setSheet(open) {
-    chromeBar.classList.remove('peek');
-    chromeBar.classList.toggle('open', open);
-    /* the book pushes back and locks while the sheet is up */
-    screenNode.classList.toggle('sheet-open', open);
-    if (open) {
-      try { localStorage.setItem('book.sheetHinted', '1'); } catch (e) {}
-      var first = chromeBar.querySelector('button:not([hidden])');
-      if (first && isPhone()) first.focus();
-    }
-  }
-  /* first book on a phone: the grab bar peeks so the sheet is discoverable */
-  function hintSheet() {
-    if (!isPhone()) return;
-    try { if (localStorage.getItem('book.sheetHinted')) return; } catch (e) {}
-    chromeBar.classList.add('peek');
-    setTimeout(function () { chromeBar.classList.remove('peek'); }, 2800);
-  }
-  var toastTimer = null;
-  function toast(html, sticky) {
-    shareToast.innerHTML = html;
-    shareToast.hidden = false;
-    clearTimeout(toastTimer);
-    if (!sticky) toastTimer = setTimeout(function () { shareToast.hidden = true; }, 8000);
-  }
+  var isPhone = BookChrome.isPhone;
+  var bookSheet = BookChrome.sheet(chromeBar, screenNode);
+  var setSheet = bookSheet.set;
+  var hintSheet = bookSheet.hint;
+  var toast = BookChrome.toaster(shareToast);
 
   var player = BookRuntime.createPlayer({
     screen: document.getElementById('screen'),
@@ -148,55 +136,6 @@
     },
     onLoaded: function (w) { document.title = w.name + ' — BOOK'; }
   });
-
-  /* using an action closes the sheet; the dimmed book is a scrim */
-  chromeBar.addEventListener('click', function (e) {
-    if (e.target.closest('button') || e.target.closest('a')) setSheet(false);
-  });
-  var scrimDismissed = false;
-  screenNode.addEventListener('pointerdown', function (e) {
-    scrimDismissed = false;
-    if (!chromeBar.classList.contains('open')) return;
-    if (e.target.closest('.chrome')) return;
-    setSheet(false);
-    scrimDismissed = true;
-    e.stopPropagation(); /* the player never sees it — no flip, no drag */
-  }, true);
-  screenNode.addEventListener('click', function (e) {
-    if (scrimDismissed) {
-      scrimDismissed = false;
-      e.stopPropagation();
-      e.preventDefault();
-    }
-  }, true);
-  /* drag the open sheet down to dismiss */
-  var sheetDrag = null;
-  chromeBar.addEventListener('pointerdown', function (e) {
-    if (chromeBar.classList.contains('open')) sheetDrag = { y: e.clientY, moved: false };
-  });
-  chromeBar.addEventListener('pointermove', function (e) {
-    if (!sheetDrag) return;
-    var dy = e.clientY - sheetDrag.y;
-    if (dy > 6 && !sheetDrag.moved) {
-      sheetDrag.moved = true;
-      /* capture so the drag survives crossing overlays (e.g. the toast) */
-      try { chromeBar.setPointerCapture(e.pointerId); } catch (err) {}
-    }
-    if (sheetDrag.moved) {
-      chromeBar.style.transition = 'none';
-      chromeBar.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
-    }
-  });
-  function endSheetDrag(e) {
-    if (!sheetDrag) return;
-    var dy = e.clientY - sheetDrag.y;
-    chromeBar.style.transition = '';
-    chromeBar.style.transform = '';
-    if (sheetDrag.moved && dy > 55) setSheet(false);
-    sheetDrag = null;
-  }
-  chromeBar.addEventListener('pointerup', endSheetDrag);
-  chromeBar.addEventListener('pointercancel', endSheetDrag);
 
   function fail(msg) {
     stateSpinner.hidden = true;
@@ -292,16 +231,7 @@
 
   /* The long-call host (see composer): image generation without SWA's
    * ~45s response cap; same-origin remains the fallback. */
-  var LONG_API = '@LONGAPI@';
-  async function apiFetch(path, opts) {
-    if (LONG_API) {
-      try {
-        var r = await fetch(LONG_API + path, opts);
-        if (r.status !== 404) return r;
-      } catch (e) {}
-    }
-    return fetch(path, opts);
-  }
+  var apiFetch = BookChrome.apiFetch;
 
   /* Actively finish the book: request each missing picture, one at a
    * time (mirrors the composer's fan-out — sequential keeps each call

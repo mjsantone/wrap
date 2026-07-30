@@ -24,6 +24,13 @@ PAGES = {
     "src/pages/editor.html": "editor.html",
 }
 
+# Copied verbatim: the embedded fonts moved out of the pages into one
+# stylesheet the browser caches across index/b/library/editor — repeat
+# navigation stops re-downloading ~330KB of base64 per page.
+ASSETS = {
+    "src/fonts.css": "fonts.css",
+}
+
 TOKEN = re.compile(r"/\*@inline ([^*]+?)\*/")
 
 # The doctype keeps browsers out of quirks mode; lang enables correct
@@ -67,6 +74,15 @@ def build_page(src: str) -> str:
 def main() -> None:
     check = "--check" in sys.argv[1:]
     stale = []
+    for src, dest in ASSETS.items():
+        content = (ROOT / src).read_text(encoding="utf-8")
+        out = ROOT / dest
+        if check:
+            if not out.is_file() or out.read_text(encoding="utf-8") != content:
+                stale.append(dest)
+        else:
+            out.write_text(content, encoding="utf-8")
+            print(f"{dest}  ({len(content):,} bytes)  <-  {src}")
     for src, dest in PAGES.items():
         built = build_page(src)
         outs = [ROOT / dest]
